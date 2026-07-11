@@ -998,8 +998,12 @@ async function analyzeCharacterPhoto(file){
       instruction: instruction
     })
   });
-  var data = await response.json();
-  if(!response.ok) throw new Error(data.error || 'API request failed');
+  var raw = await response.text();
+  var data;
+  try{ data = JSON.parse(raw); }catch(e){
+    throw new Error('Server returned ' + response.status + ': ' + raw.slice(0, 200));
+  }
+  if(!response.ok) throw new Error(data.error || ('Request failed with status ' + response.status));
   return (data.text || '').trim();
 }
 $('gen-character-board-photo').addEventListener('click', async function(){
@@ -1019,7 +1023,7 @@ $('gen-character-board-photo').addEventListener('click', async function(){
     $('char-board-wrap').scrollIntoView({ behavior:'smooth', block:'nearest' });
   }catch(err){
     hint.style.color = 'var(--red)';
-    hint.textContent = "Couldn't analyze the photo right now — try again, or describe your character in text instead.";
+    hint.textContent = "Couldn't analyze the photo — " + (err && err.message ? err.message : 'unknown error') + ". Try again, or describe your character in text instead.";
   }
   btn.textContent = oldText;
   btn.disabled = false;
