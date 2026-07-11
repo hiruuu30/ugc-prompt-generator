@@ -24,6 +24,18 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid URL' });
   }
 
+  // Shopee blocks plain HTML scraping almost entirely, but its web app calls its
+  // own internal item API under the hood. If this is a Shopee product link, try
+  // that path first. It's an unofficial endpoint — not guaranteed stable — so any
+  // failure here just falls through to the generic scraper below.
+  if (isShopeeHost(targetUrl.hostname)) {
+    const shopeeResult = await tryShopeeApi(targetUrl);
+    if (shopeeResult) {
+      res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
+      return res.status(200).json(shopeeResult);
+    }
+  }
+
   try {
     const response = await fetch(targetUrl.toString(), {
       headers: {
@@ -48,6 +60,70 @@ export default async function handler(req, res) {
     return res.status(200).json(meta);
   } catch (err) {
     return res.status(500).json({ error: 'Failed to fetch or parse the page' });
+  }
+}
+
+function isShopeeHost(hostname){
+  return /(^|\.)shopee\.[a-z.]+$/i.test(hostname);
+}
+
+// Pulls {shopid, itemid} out of the two common Shopee URL shapes:
+//   https://shopee.ph/product/123456789/9876543210
+//   https://shopee.ph/Some-Title-i.123456789.9876543210
+function extractShopeeIds(targetUrl){
+  const path = targetUrl.pathname;
+
+  let match = path.match(/\/product\/(\d+)\/(\d+)/);
+  if (match) return { shopid: match[1], itemid: match[2] };
+
+  match = path.match(/-i\.(\d+)\.(\d+)/);
+  if (match) return { shopid: match[1], itemid: match[2] };
+
+  return null;
+}
+
+async function tryShopeeApi(targetUrl){
+  const ids = extractShopeeIds(targetUrl);
+  if (!ids) return null;
+
+  const apiUrl = `${targetUrl.origin}/api/v4/item/get?itemid=${ids.itemid}&shopid=${ids.shopid}`;
+
+  try {
+    const response = await fetch(apiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        // Shopee's API checks that requests look like they came from the item page itself
+        'Referer': targetUrl.toString(),
+        'X-Requested-With': 'XMLHttpRequest',
+      }
+    });
+
+    if (!response.ok) return null;
+
+    const json = await response.json();
+    const item = json && json.data;
+    if (!item || !item.name) return null;
+
+    // Shopee prices are typically in units of 1/100000 of the actual currency amount.
+    // Verify this against a real product before trusting it in the UI.
+    const price = typeof item.price === 'number' ? item.price / 100000 : null;
+
+    // Image hashes need a CDN prefix to become real URLs. This covers current common
+    // Shopee CDN hosts, but Shopee changes these periodically — if images come back
+    // null or broken, this is the first thing to re-check.
+    const image = item.image ? `https://down-ph.img.susercontent.com/file/${item.image}` : null;
+
+    return {
+      title: item.name,
+      description: item.description || null,
+      image,
+      siteName: 'Shopee',
+      price,
+      sourceUrl: targetUrl.toString(),
+    };
+  } catch (err) {
+    return null;
   }
 }
 
