@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){
+  try{
+    var saved = localStorage.getItem('ugc-theme');
+    var theme = saved || ((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  }catch(e){}
+})();
+</script>
+<title>UGC Prompt Generator — AI Creative Brief Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mute:#6E6E73;
+    --pink:#0A84FF;
+    --cyan:#0071E3;
+    --hair:rgba(0,0,0,0.08);
+
+    --bg:#F5F5F7;
+    --surface:#FFFFFF;
+    --surface-2:#F5F5F7;
+    --text:#1D1D1F;
+    --border:#D2D2D7;
+    --red:#FF3B30;
+    --red-tint:rgba(255,59,48,0.08);
+    --blue-tint:rgba(10,132,255,0.10);
+
+    --radius-lg:20px;
+    --radius-md:12px;
+    --radius-sm:9px;
+    --radius-pill:980px;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.04);
+    --shadow-md:0 24px 48px -28px rgba(0,0,0,.22), 0 2px 10px rgba(0,0,0,.04);
+
+    --font:-apple-system,BlinkMacSystemFont,'Inter','SF Pro Display','Helvetica Neue',Arial,sans-serif;
+    --font-mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+  }
+  html[data-theme="dark"]{
+    --mute:#98989D;
+    --pink:#0A84FF;
+    --cyan:#4DA3FF;
+    --hair:rgba(255,255,255,0.09);
+
+    --bg:#000000;
+    --surface:#1C1C1E;
+    --surface-2:#2C2C2E;
+    --text:#F5F5F7;
+    --border:#3A3A3C;
+    --red:#FF453A;
+    --red-tint:rgba(255,69,58,0.16);
+    --blue-tint:rgba(10,132,255,0.18);
+  }
+  html[data-theme="dark"] ::selection{background:rgba(10,132,255,.38); color:#fff;}
+  html[data-theme="dark"] .titlecard{
+    border-color:rgba(255,255,255,.08);
+    background:
+      radial-gradient(1000px 420px at 100% -10%, rgba(10,132,255,0.16), transparent 62%),
+      radial-gradient(700px 360px at -10% 120%, rgba(10,132,255,0.09), transparent 60%),
+      linear-gradient(180deg,#1C1C1E,#161618);
+  }
+  html[data-theme="dark"] .panel{border-color:rgba(255,255,255,.08);}
+  html[data-theme="dark"] .warn{color:#FFA199;}
+  html[data-theme="dark"] .dropzone{border-color:rgba(255,255,255,.16);}
+  html[data-theme="dark"] .copy-badge{ color:#000; }
+
+  .theme-toggle{
+    background:var(--surface); color:var(--text); border:1px solid var(--border);
+    padding:8px 16px; font-size:13px; font-weight:600; border-radius:var(--radius-pill);
+    display:inline-flex; align-items:center; gap:8px; transition:background .15s, border-color .15s;
+  }
+  .theme-toggle:hover{border-color:var(--cyan); background:var(--surface-2);}
+  .theme-toggle-icon{position:relative; width:15px; height:15px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .theme-toggle-icon svg{position:absolute; top:0; left:0; transition:transform .5s cubic-bezier(.34,1.56,.64,1), opacity .35s ease;}
+  .theme-toggle-icon .icon-sun{color:#F5A623; transform:rotate(-90deg) scale(.4); opacity:0;}
+  .theme-toggle-icon .icon-moon{color:#8AB4FF; transform:rotate(0deg) scale(1); opacity:1;}
+  html[data-theme="dark"] .theme-toggle-icon .icon-sun{transform:rotate(0deg) scale(1); opacity:1;}
+  html[data-theme="dark"] .theme-toggle-icon .icon-moon{transform:rotate(90deg) scale(.4); opacity:0;}
+  .theme-toggle:active .theme-toggle-icon svg{transform:scale(.8) rotate(0deg) !important;}
+
+  body, .titlecard, .panel, input[type=text], select, textarea, .theme-toggle, .dropzone, .brief-section, .history-item{
+    transition: background-color .35s ease, border-color .35s ease, color .35s ease, box-shadow .35s ease;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .theme-toggle-icon svg{transition:none;}
+    body, .titlecard, .panel, input[type=text], select, textarea, .theme-toggle{transition:none;}
+  }
+
+  *{box-sizing:border-box;}
+  ::selection{background:rgba(10,132,255,.22); color:var(--text);}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font);
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:56px 24px 120px;}
+
+  .titlecard{
+    border:1px solid rgba(0,0,0,.05);
+    border-radius:var(--radius-lg);
+    padding:26px 32px;
+    position:relative;
+    background:
+      radial-gradient(1000px 420px at 100% -10%, rgba(10,132,255,0.09), transparent 62%),
+      radial-gradient(700px 360px at -10% 120%, rgba(10,132,255,0.05), transparent 60%),
+      linear-gradient(180deg,#FFFFFF,#FBFBFD);
+    margin-bottom:24px;
+    overflow:hidden;
+    box-shadow:var(--shadow-md);
+  }
+  .eyebrow{
+    font-family:var(--font); font-size:12px; font-weight:600; letter-spacing:.01em;
+    color:var(--cyan); margin:0 0 8px; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow .dot{color:var(--pink); font-size:7px;}
+  h1{
+    font-family:var(--font); font-weight:700; font-size:clamp(22px,3vw,30px);
+    margin:0 0 8px; letter-spacing:-.02em; color:var(--text);
+  }
+  .sub{color:var(--mute);max-width:64ch;font-size:14px;line-height:1.55;}
+
+  .steps3{display:flex; gap:14px; margin-top:20px; flex-wrap:wrap;}
+  .step3{flex:1; min-width:150px; background:rgba(255,255,255,.5); border:1px solid var(--border); border-radius:var(--radius-md); padding:14px 16px;}
+  html[data-theme="dark"] .step3{background:rgba(255,255,255,.04);}
+  .step3 .n{font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-transform:uppercase; letter-spacing:.06em;}
+  .step3 .t{font-size:14px; font-weight:600; margin-top:4px; color:var(--text);}
+
+  .panel{
+    background:var(--surface); border:1px solid rgba(0,0,0,.06); border-radius:var(--radius-lg);
+    padding:32px 36px; margin-bottom:22px; box-shadow:var(--shadow-sm);
+  }
+  .panel h2{
+    font-family:var(--font); font-weight:600; font-size:21px; letter-spacing:-.012em;
+    margin:0 0 22px; display:flex; align-items:center; gap:12px; color:var(--text);
+  }
+  .panel h2 .num{
+    font-family:var(--font); font-size:13px; font-weight:600; color:#fff; background:var(--cyan);
+    border-radius:50%; width:26px;height:26px; display:flex;align-items:center;justify-content:center; flex-shrink:0;
+  }
+
+  label{display:block;font-size:13px;color:var(--mute);margin-bottom:8px;font-weight:500;}
+  input[type=text], select, textarea{
+    width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    padding:12px 14px; border-radius:var(--radius-sm); font-size:15px; font-family:var(--font);
+    transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  input[type=text]:focus, select:focus, textarea:focus{
+    outline:none; border-color:var(--cyan); background:var(--surface); box-shadow:0 0 0 4px var(--blue-tint);
+  }
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+  .field{margin-bottom:18px;}
+  .hint{font-size:13px; color:var(--mute); margin-top:7px; line-height:1.5;}
+
+  button{
+    font-family:var(--font); font-size:15px; font-weight:590; padding:13px 26px;
+    border-radius:var(--radius-pill); border:1px solid var(--pink); background:var(--pink); color:#fff;
+    cursor:pointer; transition:background .15s, border-color .15s, transform .1s;
+  }
+  button:hover{background:#0071E3; border-color:#0071E3;}
+  button:active{transform:scale(.98);}
+  button.ghost{background:transparent; color:var(--pink); border-color:var(--border);}
+  button.ghost:hover{border-color:var(--pink); color:var(--pink); background:var(--blue-tint);}
+  button:disabled{opacity:.4; cursor:not-allowed;}
+  button:focus-visible{outline:none; box-shadow:0 0 0 4px rgba(10,132,255,.3);}
+
+  /* Dropzone */
+  .dropzone{
+    border:2px dashed var(--border); border-radius:var(--radius-md); background:var(--surface-2);
+    padding:36px 24px; text-align:center; cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  .dropzone.drag{border-color:var(--cyan); background:var(--blue-tint);}
+  .dropzone svg{color:var(--mute); margin-bottom:10px;}
+  .dropzone .dz-title{color:var(--text); font-weight:600; font-size:15px; margin:0 0 4px;}
+  .dropzone p{margin:2px 0; color:var(--mute); font-size:13.5px;}
+  .preview-wrap{display:flex; align-items:center; gap:14px; margin-top:16px;}
+  .preview-wrap img, .preview-wrap video{width:74px;height:74px;object-fit:cover;border-radius:var(--radius-sm);border:1px solid var(--border); flex-shrink:0; background:#000;}
+  .preview-meta{flex:1; font-size:13px; color:var(--mute); min-width:0;}
+  .preview-meta b{color:var(--text); display:block; font-size:14px; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  button.remove-img{background:transparent;border:1px solid var(--border);color:var(--mute);padding:8px 14px;font-size:13px; flex-shrink:0;}
+  button.remove-img:hover{border-color:var(--red); color:var(--red); background:var(--red-tint);}
+
+  /* Log / progress */
+  .log{
+    font-family:var(--font-mono); font-size:12.5px; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:var(--radius-md); padding:16px 18px; max-height:220px; overflow-y:auto;
+  }
+  .log .entry{padding:4px 0; color:var(--mute); display:flex; gap:10px;}
+  .log .entry.done{color:var(--text);}
+  .log .entry.active{color:var(--cyan);}
+  .log .entry .mark{width:16px; flex-shrink:0;}
+  .progress-outer{height:6px; background:var(--border); border-radius:3px; margin-top:14px; overflow:hidden;}
+  .progress-inner{height:100%; background:var(--pink); width:0%; transition:width .3s;}
+  .progress-label{font-size:12.5px; color:var(--mute); margin-top:8px; font-family:var(--font-mono);}
+
+  /* Brief output */
+  .brief-head{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+  .brief-head .tags{display:flex; gap:8px; flex-wrap:wrap;}
+  .tag{font-family:var(--font-mono); font-size:11px; color:var(--cyan); background:var(--blue-tint); border:1px solid rgba(10,132,255,.25); padding:4px 10px; border-radius:var(--radius-pill); text-transform:uppercase; letter-spacing:.03em;}
+  .brief-section{border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); padding:18px 20px; margin-bottom:14px; opacity:0; animation:fadein .4s ease forwards;}
+  @keyframes fadein{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .brief-section h3{display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:15px; font-weight:600; margin:0 0 10px; color:var(--text);}
+  .brief-section .content{font-size:14px; color:var(--text); line-height:1.7; white-space:pre-wrap;}
+  .brief-section .content ul{margin:4px 0 0; padding-left:18px;}
+  .brief-section .content li{margin-bottom:4px;}
+  .copy-wrap{position:relative;}
+  button.copy-btn{font-size:12px; padding:6px 12px; background:var(--surface-2); color:var(--text); border:1px solid var(--border); flex-shrink:0;}
+  button.copy-btn:hover{border-color:var(--cyan); color:var(--cyan); background:var(--blue-tint);}
+  .copy-badge{
+    position:absolute; top:-30px; right:0; background:var(--text); color:#fff;
+    font-family:var(--font); font-size:11px; font-weight:600; padding:4px 9px; border-radius:var(--radius-pill);
+    opacity:0; transform:translateY(-4px); pointer-events:none; transition:opacity .18s ease, transform .18s ease;
+  }
+  .copy-badge.show{opacity:1; transform:translateY(0);}
+
+  .variant-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:6px;}
+  .variant-row button{font-size:13px; padding:9px 16px;}
+
+  /* History */
+  .filter-tabs{display:flex; gap:8px; margin-bottom:16px;}
+  .filter-tabs button{font-size:13px; padding:7px 16px; background:var(--surface-2); border:1px solid var(--border); color:var(--text);}
+  .filter-tabs button.active{background:var(--pink); border-color:var(--pink); color:#fff;}
+  .history-item{display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:10px; background:var(--surface);}
+  .history-item .h-meta{flex:1; font-size:12.5px; color:var(--mute); min-width:0;}
+  .history-item .h-meta b{color:var(--text); font-size:14px; display:block; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  button.star-btn{background:transparent; border:none; font-size:19px; cursor:pointer; padding:4px; color:var(--border); line-height:1;}
+  button.star-btn.active{color:#F5A623;}
+  button.load-btn{font-size:12.5px; padding:7px 14px; flex-shrink:0;}
+  .empty-note{font-size:13.5px; color:var(--mute); text-align:center; padding:24px 0;}
+
+  footer{text-align:center; font-size:13px; color:var(--mute); margin-top:48px; font-family:var(--font);}
+  @media (max-width:640px){
+    .row2, .steps3{grid-template-columns:1fr; flex-direction:column;}
+    .panel{padding:26px 22px;}
+    .titlecard{padding:22px 24px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div style="display:flex;align-items:center;justify-content:flex-end;margin:0 0 14px">
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+      <span class="theme-toggle-icon" aria-hidden="true">
+        <svg class="icon-sun" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.6"/><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="4.2" y1="4.2" x2="5.9" y2="5.9"/><line x1="18.1" y1="18.1" x2="19.8" y2="19.8"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.2" y1="19.8" x2="5.9" y2="18.1"/><line x1="18.1" y1="5.9" x2="19.8" y2="4.2"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M20.8 14.3a8.6 8.6 0 0 1-10.9-10.9 1 1 0 0 0-1.3-1.3A10.6 10.6 0 1 0 22.1 15.6a1 1 0 0 0-1.3-1.3z"/></svg>
+      </span>
+      <span class="theme-toggle-label">Dark</span>
+    </button>
+  </div>
+
+  <div class="titlecard">
+    <p class="eyebrow"><span class="dot">●</span> AI Creative Studio</p>
+    <h1>Generate High-Converting UGC Video Prompts in Seconds</h1>
+    <p class="sub">Upload a product image, choose your content style, and let AI build a production-ready UGC prompt for ChatGPT, Veo, Kling, Runway, or any AI video tool.</p>
+    <div class="steps3">
+      <div class="step3"><div class="n">Step 1</div><div class="t">Upload Product</div></div>
+      <div class="step3"><div class="n">Step 2</div><div class="t">Choose Options</div></div>
+      <div class="step3"><div class="n">Step 3</div><div class="t">Generate Prompt</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="num">1</span> Product photo or video</h2>
+    <div class="dropzone" id="dropzone">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <p class="dz-title">Drag &amp; drop a product photo or video</p>
+      <p>or click to browse — or paste with ⌘/Ctrl+V</p>
+      <p>JPG, PNG, WEBP, MP4, MOV, or WEBM</p>
+    </div>
+    <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" style="display:none">
+    <div id="preview-wrap" class="preview-wrap" style="display:none">
+      <img id="preview-img" alt="Product preview">
+      <video id="preview-video" muted loop playsinline autoplay style="display:none"></video>
+      <div class="preview-meta"><b id="preview-name"></b><span id="preview-size"></span></div>
+      <button type="button" class="remove-img" id="remove-img">Remove</button>
+    </div>
+    <div class="field" style="margin-top:16px; margin-bottom:0">
+      <label for="product-name">Product name <span style="color:var(--mute);font-weight:400">(optional — helps sharpen the brief)</span></label>
+      <input type="text" id="product-name" placeholder="e.g. Glow Serum, Portable Blender, Wireless Earbuds">
+    </div>
+    <div class="field" style="margin-top:16px; margin-bottom:0">
+      <label for="product-link">Or paste a product link <span style="color:var(--mute);font-weight:400">(Shopee, TikTok Shop, Lazada, Amazon, etc.)</span></label>
+      <div style="display:flex; gap:10px;">
+        <input type="text" id="product-link" placeholder="e.g. https://shopee.ph/Matte-Lip-Tint-i.123456789.987654321" style="flex:1">
+        <button type="button" class="ghost" id="analyze-link" style="flex-shrink:0; padding:12px 20px; font-size:14px; white-space:nowrap">Analyze Link</button>
+      </div>
+      <p class="hint" id="link-result"></p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="num">2</span> Options</h2>
+    <div class="row2">
+      <div class="field">
+        <label for="category">Category</label>
+        <select id="category">
+          <option value="Beauty">Beauty</option>
+          <option value="Skincare">Skincare</option>
+          <option value="Fashion">Fashion</option>
+          <option value="Electronics">Electronics</option>
+          <option value="Kitchen">Kitchen</option>
+          <option value="Home">Home</option>
+          <option value="Pet">Pet</option>
+          <option value="Fitness">Fitness</option>
+          <option value="Food">Food</option>
+          <option value="Baby">Baby</option>
+          <option value="Automotive">Automotive</option>
+          <option value="Office">Office</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="platform">Platform</label>
+        <select id="platform">
+          <option value="TikTok">TikTok</option>
+          <option value="Instagram Reels">Instagram Reels</option>
+          <option value="Facebook Reels">Facebook Reels</option>
+          <option value="YouTube Shorts">YouTube Shorts</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="video-type">Video Type</label>
+        <select id="video-type">
+          <option value="Problem → Solution">Problem → Solution</option>
+          <option value="Testimonial">Testimonial</option>
+          <option value="Storytelling">Storytelling</option>
+          <option value="Unboxing">Unboxing</option>
+          <option value="Product Demo">Product Demo</option>
+          <option value="Before & After">Before &amp; After</option>
+          <option value="POV">POV</option>
+          <option value="Day in My Life">Day in My Life</option>
+          <option value="Aesthetic">Aesthetic</option>
+          <option value="ASMR">ASMR</option>
+          <option value="Comparison">Comparison</option>
+          <option value="Voiceover">Voiceover</option>
+          <option value="Talking Head">Talking Head</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="style">Style</label>
+        <select id="style">
+          <option value="Authentic UGC">Authentic UGC</option>
+          <option value="Luxury">Luxury</option>
+          <option value="Cinematic">Cinematic</option>
+          <option value="Funny">Funny</option>
+          <option value="Emotional">Emotional</option>
+          <option value="Educational">Educational</option>
+          <option value="Viral">Viral</option>
+          <option value="Minimalist">Minimalist</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="duration">Duration</label>
+        <select id="duration">
+          <option value="15">15 sec</option>
+          <option value="20" selected>20 sec</option>
+          <option value="30">30 sec</option>
+          <option value="45">45 sec</option>
+          <option value="60">60 sec</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label for="audience">Target Audience <span style="color:var(--mute);font-weight:400">(optional)</span></label>
+        <select id="audience">
+          <option value="">No specific audience — general appeal</option>
+          <option value="Moms">Moms</option>
+          <option value="Students">Students</option>
+          <option value="Office Workers">Office Workers</option>
+          <option value="Men">Men</option>
+          <option value="Women">Women</option>
+          <option value="Gamers">Gamers</option>
+          <option value="Travelers">Travelers</option>
+          <option value="Fitness Enthusiasts">Fitness Enthusiasts</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="num">3</span> Generate</h2>
+    <button id="go">Generate Prompt</button>
+    <p class="hint">Builds a full creative brief by dynamically combining your product, category, platform, video type, style, duration, and audience — nothing here is a single hardcoded template.</p>
+  </div>
+
+  <div class="panel" id="status-panel" style="display:none">
+    <h2><span class="num">4</span> Status</h2>
+    <div class="log" id="log"></div>
+    <div class="progress-outer"><div class="progress-inner" id="progress-inner"></div></div>
+    <p class="progress-label" id="progress-label"></p>
+  </div>
+
+  <div class="panel" id="out-panel" style="display:none">
+    <h2><span class="num">5</span> Creative Brief</h2>
+    <div class="brief-head">
+      <div class="tags" id="brief-tags"></div>
+      <button type="button" class="ghost" id="copy-all">Copy Entire Prompt</button>
+    </div>
+    <div id="brief-sections"></div>
+    <div class="variant-row">
+      <button type="button" class="ghost" id="v-another">Generate Another Version</button>
+      <button type="button" class="ghost" id="v-emotional">Make More Emotional</button>
+      <button type="button" class="ghost" id="v-funny">Make More Funny</button>
+      <button type="button" class="ghost" id="v-luxury">Make More Luxury</button>
+      <button type="button" class="ghost" id="v-viral">Make More Viral</button>
+      <button type="button" class="ghost" id="v-shorter">Shorter Version</button>
+      <button type="button" class="ghost" id="v-longer">Longer Version</button>
+    </div>
+  </div>
+
+  <div class="panel" id="history-panel" style="display:none">
+    <h2><span class="num">6</span> History</h2>
+    <div class="filter-tabs">
+      <button type="button" class="active" data-filter="all">All</button>
+      <button type="button" data-filter="fav">Favorites</button>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+  <footer>UGC Prompt Generator — everything runs locally in your browser.</footer>
+</div>
+
+<script>
+(function(){
+  var toggle = document.getElementById('theme-toggle');
+  var label = toggle.querySelector('.theme-toggle-label');
+  function syncLabel(){
+    var t = document.documentElement.getAttribute('data-theme');
+    label.textContent = t === 'dark' ? 'Light' : 'Dark';
+  }
+  syncLabel();
+  toggle.addEventListener('click', function(e){
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    function apply(){
+      document.documentElement.setAttribute('data-theme', next);
+      try{ localStorage.setItem('ugc-theme', next); }catch(err){}
+      syncLabel();
+    }
+    if(document.startViewTransition){
+      document.startViewTransition(apply);
+    } else { apply(); }
+  });
+})();
+
+// ---------- helpers ----------
+function $(id){ return document.getElementById(id); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function pickMany(arr, n){
+  var copy = arr.slice();
+  for(var i=copy.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=copy[i]; copy[i]=copy[j]; copy[j]=t; }
+  return copy.slice(0, n);
+}
+function fill(str, tokens){
+  return str.replace(/\{(\w+)\}/g, function(m,k){ return tokens[k] !== undefined ? tokens[k] : m; });
+}
+function sleep(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+
+// ---------- data ----------
+var CATEGORY_INFO = {
+  "Beauty": { features:["blendable, buildable pigment","travel-friendly compact packaging","doesn't budge under studio lighting"], painPoints:["makeup that fades or oxidizes by midday","cakey texture that shows up in close-up video","too many steps for an everyday routine"], benefits:["all-day wear with zero touch-ups","a natural finish that photographs beautifully","a routine that takes under five minutes"] },
+  "Skincare": { features:["lightweight, fast-absorbing formula","dermatologist-tested ingredient list","fits into a simple 3-step routine"], painPoints:["breakouts that flare up at the worst time","dullness that no amount of concealer fixes","sensitive skin reacting to everything new"], benefits:["visibly calmer, more even skin","a glow that doesn't need a filter","a routine simple enough to actually stick to"] },
+  "Fashion": { features:["true-to-size, flattering fit","fabric that doesn't wrinkle in a bag","versatile enough for day-to-night"], painPoints:["never knowing what size to order online","pieces that look nothing like the product photos","a closet full of clothes with nothing to wear"], benefits:["a fit that actually matches the model shots","one piece that works for five different outfits","compliments the second you walk in"] },
+  "Electronics": { features:["battery that actually lasts all day","setup in under two minutes","works seamlessly across devices"], painPoints:["gadgets that die halfway through the day","confusing setup with a 40-page manual","tech that only works with one ecosystem"], benefits:["no more mid-day charging anxiety","plug-and-play simplicity","one device that just works everywhere"] },
+  "Kitchen": { features:["dishwasher-safe, easy cleanup","compact enough for small kitchens","does the job of three separate gadgets"], painPoints:["counters cluttered with single-use gadgets","recipes that take way longer than promised","cleanup that takes longer than cooking"], benefits:["one tool replacing a drawer full of others","restaurant-quality results at home","dinner on the table in half the time"] },
+  "Home": { features:["blends into any room's decor","installs with zero tools required","built to handle daily wear"], painPoints:["a home that never quite feels finished","clutter with nowhere good to go","décor that looks cheap up close"], benefits:["a space that finally feels put-together","storage that actually looks intentional","upgrades that photograph like a magazine spread"] },
+  "Pet": { features:["vet-recommended materials","built to survive determined chewers","easy to clean after the messiest days"], painPoints:["toys that fall apart in a day","a picky pet that ignores everything new","messes that take forever to clean up"], benefits:["a toy that actually survives playtime","a pet that's obsessed from day one","less mess, more time actually playing"] },
+  "Fitness": { features:["adjusts to any fitness level","packs flat for travel workouts","doubles as a full at-home gym"], painPoints:["a gym membership that goes unused","home workouts that get boring fast","not enough space for real equipment"], benefits:["a full workout without leaving the living room","progress you can actually see week to week","no more excuses about the gym being far"] },
+  "Food": { features:["small-batch, real ingredients","ready in under five minutes","satisfies the craving without the guilt"], painPoints:["snacks that taste like cardboard","cravings hitting at the worst possible time","'healthy' options that taste like punishment"], benefits:["a snack that actually tastes like the real thing","craving handled in under a minute","guilt-free doesn't mean flavor-free anymore"] },
+  "Baby": { features:["hospital-grade safety materials","grows with your child stage by stage","machine-washable for real-life messes"], painPoints:["gear that's outgrown within a month","late nights fumbling with instructions","safety questions with no clear answers"], benefits:["one purchase that lasts through multiple stages","a setup simple enough for exhausted parents","peace of mind that's actually backed up"] },
+  "Automotive": { features:["installs without a mechanic","fits most makes and models out of the box","built to handle daily driving conditions"], painPoints:["a car that looks tired no matter how often it's washed","upgrades that need a professional install","gear that doesn't fit your exact model"], benefits:["a dealership-fresh look in one afternoon","an install simple enough to DIY","a fit that just clicks into place"] },
+  "Office": { features:["adjusts to your exact desk setup","cuts cable clutter completely","upgrades a desk without a full overhaul"], painPoints:["a desk that looks like a cable graveyard","back and neck pain by 2pm","a home office that doesn't feel like a real workspace"], benefits:["a desk that finally looks intentional","noticeably less strain by end of day","a workspace that feels like an upgrade, not an afterthought"] }
+};
+
+var STYLE_INFO = {
+  "Authentic UGC": { tones:["real","unscripted","relatable","no-filter"], music:"Chill lo-fi or a trending, low-key sound — nothing that competes with the voiceover.", editing:["Quick handheld-style cuts, nothing too polished","Minimal transitions — hard cuts feel more real","Native platform captions in a casual font","Light sound effects only where natural","Small jump cuts are fine, even preferred"] },
+  "Luxury": { tones:["elevated","refined","premium","quietly expensive"], music:"Slow cinematic strings or a moody piano loop — restrained and expensive-sounding.", editing:["Smooth, slow transitions — no jump cuts","Subtle zooms, never jarring","Clean serif or minimal sans-serif on-screen text","Soft whoosh sound design between scenes","Warm, desaturated, filmic color grade"] },
+  "Cinematic": { tones:["moody","filmic","dramatic","atmospheric"], music:"Building orchestral swell or ambient drone with a clear emotional arc.", editing:["Match cuts and slow-motion inserts","Dramatic speed ramps on the key reveal moment","Letterboxed framing if the platform allows it","Rich, directional sound design","Deep shadows with controlled highlights"] },
+  "Funny": { tones:["chaotic","deadpan","self-aware","playful"], music:"A trending comedic sound or a slightly goofy upbeat synth loop with a punchline sting.", editing:["Snappy jump cuts on the punchlines","Zoom-in for comedic emphasis on reactions","Bold, meme-style on-screen text","Classic comedic sound effects (record scratch, ding)","Fast pacing, no dead air"] },
+  "Emotional": { tones:["heartfelt","vulnerable","tender","sincere"], music:"Soft piano or acoustic guitar, slow build, plenty of room to breathe.", editing:["Slower cuts — let reactions actually land","Gentle push-ins during key emotional beats","Minimal on-screen text, let the visuals carry it","Warm, soft color grade","Quiet moments left intentionally quiet"] },
+  "Educational": { tones:["clear","informative","straightforward","credible"], music:"Light, upbeat background track kept low in the mix, unobtrusive.", editing:["Clean cuts on each new point","Text callouts for key facts or numbers","Simple zoom-ins on the feature being explained","Consistent, readable caption style throughout","No effects that distract from the information"] },
+  "Viral": { tones:["high-energy","meme-coded","fast-paced","addictive"], music:"Whatever's trending on the platform this week — high-energy and built to be duetted.", editing:["Fast cuts synced to the beat drop","Speed ramps on the hook and the reveal","Bold, oversized on-screen text","Trending sound effects layered in","Loop-friendly ending that leads back to the hook"] },
+  "Minimalist": { tones:["quiet","clean","understated","deliberate"], music:"Sparse ambient texture or near-silence with clean diegetic sound only.", editing:["Long, held shots with minimal cutting","Barely-there transitions, mostly hard cuts","Small, restrained on-screen text, if any","No unnecessary sound effects","Negative space left intentionally empty"] }
+};
+
+var SCENE_STRUCTURE = {
+  "Problem → Solution": ["hook","problem","introduce","solution","closeup","cta"],
+  "Testimonial": ["hook","talking","problem","solution","reaction","cta"],
+  "Storytelling": ["hook","introduce","problem","solution","reaction","cta"],
+  "Unboxing": ["hook","reveal","reveal","demo","closeup","cta"],
+  "Product Demo": ["hook","introduce","demo","demo","closeup","cta"],
+  "Before & After": ["hook","before","after","reaction","closeup","cta"],
+  "POV": ["hook","routine","problem","solution","closeup","cta"],
+  "Day in My Life": ["hook","routine","routine","introduce","closeup","cta"],
+  "Aesthetic": ["hook","closeup","demo","closeup","reaction","cta"],
+  "ASMR": ["hook","closeup","demo","closeup","closeup","cta"],
+  "Comparison": ["hook","comparison","comparison","solution","closeup","cta"],
+  "Voiceover": ["hook","introduce","problem","solution","demo","cta"],
+  "Talking Head": ["hook","talking","problem","solution","talking","cta"]
+};
+
+var PURPOSE_TITLES = { hook:"Hook", introduce:"Introduce Product", problem:"Problem", solution:"Solution", demo:"Product Demo", reveal:"Reveal", reaction:"Reaction", closeup:"Product Close-Up", comparison:"Comparison", routine:"In Context", before:"Before", after:"After", talking:"Talking Head", cta:"CTA" };
+
+var PURPOSE_TEMPLATES = {
+  hook: ["Open tight on {product} as the hook line lands: \"{hookLine}\"", "Cold open — catch a genuine reaction to {product} before any context is given.", "Fast, {tone} cut straight into {product} as the hook plays over it."],
+  introduce: ["Introduce {product} in hand with a quick label flash so viewers can screenshot it later.", "Show {product} on a clean surface, then pick it up to give a sense of scale.", "Cut to {product} coming out of a bag or drawer — casual, unstaged."],
+  problem: ["Show the frustration of {painPoint} — relatable, no dialogue needed, just the face.", "Quick montage of dealing with {painPoint} before {product} enters the picture.", "Voiceover admits: \"I used to deal with {painPoint} constantly.\""],
+  solution: ["Cut to {product} in action, solving {painPoint} in real time.", "Show {benefit} — the moment it clicks that {product} actually works.", "Side-by-side of life before {product} vs. after, letting {benefit} speak for itself."],
+  demo: ["Hands-on demo of {feature}, filmed close enough to see the detail.", "Step-by-step use of {product}, natural pacing, no rushed cuts.", "Show {feature} in action from an angle that highlights {benefit}."],
+  reveal: ["Unbox {product} slowly — packaging first, then the reveal of the product itself.", "Peel back packaging to reveal {product}, letting the first-look reaction play out.", "Quick flat-lay of everything included before picking up {product}."],
+  reaction: ["Genuine reaction shot — eyes widen as {benefit} lands.", "Close-up on a face reacting to {product} working better than expected.", "Candid, unscripted \"oh wow\" moment as it clicks."],
+  closeup: ["Macro close-up on {feature}, letting the product speak for itself.", "Slow pan across {product}, highlighting the detail that sells {benefit}.", "Product spin shot with soft light catching {feature}."],
+  comparison: ["Split-screen: {product} next to a generic alternative, same task, different result.", "Show the old way vs. {product}, timing both to prove {benefit}.", "Direct comparison of {feature} against what viewers are used to."],
+  routine: ["Weave {product} into a normal daily routine — no separate 'ad moment,' just part of the day.", "Show {product} being used in-context, mid-task, like any other day.", "Quick vlog-style clip of {product} showing up naturally during the day."],
+  before: ["Establish the 'before' — {painPoint}, clearly, no product yet.", "Set up the before state so the after hits harder: {painPoint}, unresolved."],
+  after: ["Reveal the after — {benefit}, thanks to {product}.", "Cut to the after state and let {benefit} do the talking, minimal text needed."],
+  talking: ["Talking-head take: speak directly to camera about why {product} won you over.", "Casual sit-down monologue, like catching up with a friend about {product}."],
+  cta: ["End on {product} in frame with a clear CTA: \"{ctaLine}\"", "Close with a direct-to-camera CTA — \"{ctaLine}\" — before the final product shot.", "Text-on-screen CTA over a final beauty shot of {product}: \"{ctaLine}\""]
+};
+
+var CAPTION_BY_PURPOSE = {
+  hook: ["wait for it 👀","ok THIS is different","not me finding this","the algorithm was right"],
+  introduce: ["meet {product}","this is {product} btw","found: {product}"],
+  problem: ["the struggle was real","relatable? maybe just me","before: chaos"],
+  solution: ["and then this happened","game changer, no cap","this fixed it"],
+  demo: ["here's how it works","the demo you needed","watch this part"],
+  reveal: ["let's see what's inside","unboxing time","first look"],
+  reaction: ["the reaction is everything","did NOT expect that","my face rn"],
+  closeup: ["the detail 🔍","look at this texture","zoom in, you'll see it"],
+  comparison: ["before vs. now","there's no comparison","old way vs. {product}"],
+  routine: ["just a normal day tbh","part of my routine now","not sponsored, just obsessed"],
+  before: ["before:","the before shot"],
+  after: ["after:","the after shot 😮"],
+  talking: ["real talk for a sec","hear me out","let me explain"],
+  cta: ["link in bio ⬇️","go grab yours","you're welcome"]
+};
+
+var HOOK_LINES = ["POV: you just found out {product} fixes {painPoint} for good.","Nobody asked me but I need to talk about {product}.","{painPoint}? Not anymore, not since {product}.","I was today years old when I found {product}.","This is your sign to finally try {product}.","Okay wait, {product} actually works and I have receipts.","Tell me why {product} was hiding from me this whole time.","The way {product} just solved {painPoint} in one try—"];
+var CTA_LINES = ["Link in bio before this sells out","Tap the link, thank me later","Go grab yours before I do","Comment 'LINK' and I'll send it your way","Add it to cart, you deserve this","Shop now — trust me on this one","Don't sleep on this one, link's up top"];
+var SHOT_POOL = ["Close-up","POV","Selfie","Overhead","Walking Shot","Handheld","Macro","Product Spin"];
+var BROLL_POOL = ["Texture close-up of {product} from a different angle","Hands interacting with {product} in natural light","A quick lifestyle cutaway showing {category} in everyday use","Detail shot of packaging or branding on {product}","Slow-motion insert of {product} being picked up or set down","Ambient shot of the space or setting the video takes place in"];
+
+var DURATIONS = ["15","20","30","45","60"];
+
+var CATEGORY_KEYWORDS = {
+  "Beauty": ["makeup","lipstick","lip tint","liptint","foundation","mascara","blush","palette","cosmetic","lip gloss","eyeliner","concealer"],
+  "Skincare": ["serum","moisturizer","cleanser","sunscreen","toner","skincare","essence","acne","retinol","niacinamide","spf"],
+  "Fashion": ["dress","shirt","jeans","jacket","shoes","sneakers","bag","fashion","apparel","blouse","skirt","hoodie","sandals","heels"],
+  "Electronics": ["earbuds","headphone","charger","cable","powerbank","power bank","gadget","phone case","laptop","speaker","electronics","smartwatch","tws"],
+  "Kitchen": ["blender","kitchen","cookware","frying pan","knife set","air fryer","airfryer","mixer","kettle","rice cooker"],
+  "Home": ["home decor","furniture","lamp","organizer","storage box","pillow","curtain","candle","home"],
+  "Pet": ["pet","dog","cat","leash","pet food","cat litter","pet bed"],
+  "Fitness": ["fitness","gym","yoga","dumbbell","resistance band","workout","treadmill"],
+  "Food": ["snack","coffee","tea","chocolate","instant noodles","biscuit"],
+  "Baby": ["baby","infant","diaper","stroller","baby carrier","feeding bottle"],
+  "Automotive": ["car accessory","car","auto","vehicle","tire","dashcam","car charger"],
+  "Office": ["office","desk","chair","laptop stand","desk organizer","monitor stand"]
+};
+
+function detectStore(hostname){
+  hostname = (hostname || '').toLowerCase();
+  if(hostname.indexOf('shopee') > -1) return 'Shopee';
+  if(hostname.indexOf('tiktok') > -1) return 'TikTok Shop';
+  if(hostname.indexOf('lazada') > -1) return 'Lazada';
+  if(hostname.indexOf('amazon') > -1) return 'Amazon';
+  if(hostname.indexOf('zalora') > -1) return 'Zalora';
+  return 'that store';
+}
+function guessCategoryFromText(text){
+  text = (text || '').toLowerCase();
+  var best = null, bestScore = 0;
+  Object.keys(CATEGORY_KEYWORDS).forEach(function(cat){
+    var score = 0;
+    CATEGORY_KEYWORDS[cat].forEach(function(kw){ if(text.indexOf(kw) > -1) score++; });
+    if(score > bestScore){ bestScore = score; best = cat; }
+  });
+  return best;
+}
+function extractProductNameFromUrl(urlObj){
+  try{
+    var parts = urlObj.pathname.split('/').filter(Boolean);
+    var candidate = '';
+    parts.forEach(function(p){
+      var cleaned = decodeURIComponent(p).replace(/-i\.\d+.*$/,'').replace(/\.\w+$/,'');
+      if(cleaned.split('-').length > candidate.split('-').length) candidate = cleaned;
+    });
+    if(!candidate) return '';
+    var name = candidate.replace(/[-_+]+/g, ' ').replace(/\b\d{5,}\b/g,'').trim();
+    if(!name) return '';
+    name = name.replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+    return name.slice(0, 60);
+  }catch(e){ return ''; }
+}
+function analyzeProductLink(raw){
+  raw = (raw || '').trim();
+  if(!raw) return;
+  var urlObj;
+  try{
+    urlObj = new URL(/^https?:\/\//i.test(raw) ? raw : 'https://' + raw);
+  }catch(e){
+    $('link-result').textContent = "That doesn't look like a valid link — try pasting the full product URL.";
+    return;
+  }
+  var store = detectStore(urlObj.hostname);
+  var name = extractProductNameFromUrl(urlObj);
+  var category = guessCategoryFromText(name + ' ' + raw);
+  if(name) $('product-name').value = name;
+  if(category) $('category').value = category;
+  var msg = 'Detected a ' + store + ' link.';
+  msg += name ? (' Guessed product name: "' + name + '".') : ' Could not guess a product name from this link — enter one manually.';
+  msg += category ? (' Likely category: ' + category + '.') : ' Category isn\'t obvious from the link — please pick one.';
+  msg += ' (Parsed from the link text only, not the live page.)';
+  $('link-result').textContent = msg;
+  resetForNewGeneration();
+}
+
+// ---------- state ----------
+var uploadedFile = null;
+var history = [];
+try{ history = JSON.parse(localStorage.getItem('ugc-history') || '[]'); }catch(e){ history = []; }
+var historyFilter = 'all';
+var currentBrief = null;
+var currentMeta = null;
+
+// ---------- image upload ----------
+var dropzone = $('dropzone'), fileInput = $('file-input');
+dropzone.addEventListener('click', function(){ fileInput.click(); });
+dropzone.addEventListener('dragover', function(e){ e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', function(){ dropzone.classList.remove('drag'); });
+dropzone.addEventListener('drop', function(e){
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if(e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', function(){ if(fileInput.files[0]) handleFile(fileInput.files[0]); });
+window.addEventListener('paste', function(e){
+  var items = (e.clipboardData || {}).items || [];
+  for(var i=0;i<items.length;i++){
+    if(items[i].type && (items[i].type.indexOf('image') === 0 || items[i].type.indexOf('video') === 0)){
+      var blob = items[i].getAsFile();
+      if(blob) handleFile(blob);
+      break;
+    }
+  }
+});
+function handleFile(file){
+  if(uploadedFile) resetForNewGeneration();
+  uploadedFile = file;
+  var url = URL.createObjectURL(file);
+  var isVideo = (file.type || '').indexOf('video') === 0;
+  var imgEl = $('preview-img'), vidEl = $('preview-video');
+  if(isVideo){
+    vidEl.src = url; vidEl.style.display = 'block';
+    imgEl.style.display = 'none'; imgEl.removeAttribute('src');
+  } else {
+    imgEl.src = url; imgEl.style.display = 'block';
+    vidEl.style.display = 'none'; vidEl.removeAttribute('src');
+  }
+  $('preview-name').textContent = file.name || (isVideo ? 'pasted-video.mp4' : 'pasted-image.png');
+  $('preview-size').textContent = file.size ? (Math.round(file.size/1024) + ' KB' + (isVideo ? ' · video' : '')) : '';
+  $('preview-wrap').style.display = 'flex';
+  dropzone.style.display = 'none';
+  if(!$('product-name').value){
+    var guess = (file.name || '').replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim();
+    if(guess) $('product-name').value = guess.replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+  }
+}
+var linkInput = $('product-link');
+$('analyze-link').addEventListener('click', function(){ analyzeProductLink(linkInput.value); });
+linkInput.addEventListener('keydown', function(e){
+  if(e.key === 'Enter'){ e.preventDefault(); analyzeProductLink(linkInput.value); }
+});
+linkInput.addEventListener('paste', function(e){
+  var text = (e.clipboardData || window.clipboardData).getData('text');
+  if(text) setTimeout(function(){ analyzeProductLink(text); }, 0);
+});
+
+$('remove-img').addEventListener('click', function(){
+  uploadedFile = null;
+  $('preview-wrap').style.display = 'none';
+  $('preview-img').style.display = 'none'; $('preview-img').removeAttribute('src');
+  $('preview-video').style.display = 'none'; $('preview-video').removeAttribute('src');
+  dropzone.style.display = 'block';
+  fileInput.value = '';
+  resetForNewGeneration();
+});
+function resetForNewGeneration(){
+  currentBrief = null;
+  currentMeta = null;
+  $('status-panel').style.display = 'none';
+  $('log').innerHTML = '';
+  bumpProgress(0);
+  $('out-panel').style.display = 'none';
+  $('brief-sections').innerHTML = '';
+  $('brief-tags').innerHTML = '';
+  $('go').disabled = false;
+}
+
+// ---------- logging ----------
+function logLine(text, cls){
+  var log = $('log');
+  var div = document.createElement('div');
+  div.className = 'entry ' + (cls || '');
+  div.innerHTML = '<span class="mark">' + (cls === 'done' ? '✔' : '·') + '</span><span>' + text + '</span>';
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  return div;
+}
+function bumpProgress(frac){
+  $('progress-inner').style.width = Math.round(frac*100) + '%';
+  $('progress-label').textContent = Math.round(frac*100) + '%';
+}
+
+// ---------- brief generation ----------
+function buildBrief(meta){
+  var cat = CATEGORY_INFO[meta.category];
+  var feature = pick(cat.features);
+  var painPoint = pick(cat.painPoints);
+  var benefit = pick(cat.benefits);
+  var styleInfo = STYLE_INFO[meta.style];
+  var tone = pick(styleInfo.tones);
+  var tone2 = pick(styleInfo.tones.filter(function(t){ return t !== tone; }));
+  var hookLine = fill(pick(HOOK_LINES), { product: meta.product, painPoint: painPoint });
+  var ctaLine = pick(CTA_LINES);
+
+  var tokens = { product: meta.product, category: meta.category, feature: feature, painPoint: painPoint, benefit: benefit, audience: meta.audience || 'a broad, general audience', tone: tone, tone2: tone2, hookLine: hookLine, ctaLine: ctaLine, duration: meta.duration, platform: meta.platform };
+
+  var structure = SCENE_STRUCTURE[meta.videoType];
+  var scenes = structure.map(function(purpose, i){
+    var content = fill(pick(PURPOSE_TEMPLATES[purpose]), tokens);
+    var caption = fill(pick(CAPTION_BY_PURPOSE[purpose]), tokens);
+    return { n: i+1, title: PURPOSE_TITLES[purpose], content: content, caption: caption };
+  });
+
+  var productAnalysis =
+    "Product name: " + meta.product + "\n" +
+    "Category: " + meta.category + "\n" +
+    "Key features:\n" + cat.features.map(function(f){ return "  • " + f; }).join("\n") + "\n" +
+    "Target audience: " + (meta.audience || "General audience, broad appeal") + "\n" +
+    "Possible pain points:\n" + cat.painPoints.map(function(p){ return "  • " + p; }).join("\n") + "\n" +
+    "Benefits:\n" + cat.benefits.map(function(b){ return "  • " + b; }).join("\n");
+
+  var videoConcept = "A " + meta.duration + "-second " + tone + ", " + tone2 + " " + meta.videoType.toLowerCase() + " built for " + meta.platform + ", aimed at " + (meta.audience || "a broad, general audience") + ". " + meta.product + " is the natural hero of a moment viewers already recognize: dealing with " + painPoint + ", then finding the fix. The whole thing should feel " + tone + " rather than like a traditional ad.";
+
+  var hook = "\"" + hookLine + "\"";
+
+  var fullScript =
+    "[HOOK]\n\"" + hookLine + "\"\n\n" +
+    "[VO] " + painPoint.charAt(0).toUpperCase() + painPoint.slice(1) + " used to be a whole thing for me. Then I tried " + meta.product + ".\n\n" +
+    "[VO] Turns out " + feature + " was exactly what I needed — " + benefit + ", honestly.\n\n" +
+    "[CTA]\n\"" + ctaLine + "\"";
+
+  var sceneBreakdown = scenes.map(function(s){ return "Scene " + s.n + " — " + s.title + "\n" + s.content; }).join("\n\n");
+
+  var shots = pickMany(SHOT_POOL, 5);
+  var shotList = shots.map(function(s){ return "• " + s; }).join("\n");
+
+  var broll = pickMany(BROLL_POOL, 4).map(function(b){ return "• " + fill(b, tokens); }).join("\n");
+
+  var voiceover =
+    "\"" + hookLine + "\" " + painPoint.charAt(0).toUpperCase() + painPoint.slice(1) + " used to be my whole personality — then I found " + meta.product + ". " +
+    "Turns out " + feature + " was exactly what I needed. Now it's just " + benefit + ", no cap. " + ctaLine + ".";
+
+  var onScreenText = scenes.map(function(s){ return "Scene " + s.n + " (" + s.title + "): " + s.caption; }).join("\n");
+
+  var editingSuggestions = styleInfo.editing.map(function(e){ return "• " + e; }).join("\n");
+
+  var musicStyle = styleInfo.music;
+
+  var ctaFinal = "\"" + ctaLine + "\"";
+
+  return {
+    "Product Analysis": productAnalysis,
+    "Video Concept": videoConcept,
+    "Hook": hook,
+    "Full Script": fullScript,
+    "Scene Breakdown": sceneBreakdown,
+    "Shot List": shotList,
+    "B-roll Ideas": broll,
+    "Voiceover": voiceover,
+    "On-screen Text": onScreenText,
+    "Editing Suggestions": editingSuggestions,
+    "Music Style": musicStyle,
+    "CTA": ctaFinal
+  };
+}
+
+// ---------- rendering ----------
+function renderBrief(meta, brief){
+  currentMeta = meta; currentBrief = brief;
+  $('out-panel').style.display = 'block';
+  var tagsHtml = ['Category: ' + meta.category, 'Platform: ' + meta.platform, meta.videoType, meta.style, meta.duration + 's'].map(function(t){ return '<span class="tag">' + t + '</span>'; }).join('');
+  $('brief-tags').innerHTML = tagsHtml;
+  var container = $('brief-sections');
+  container.innerHTML = '';
+  var order = ["Product Analysis","Video Concept","Hook","Full Script","Scene Breakdown","Shot List","B-roll Ideas","Voiceover","On-screen Text","Editing Suggestions","Music Style","CTA"];
+  order.forEach(function(key, idx){
+    var section = document.createElement('div');
+    section.className = 'brief-section';
+    section.style.animationDelay = (idx*0.03) + 's';
+    var safeId = 'sec-' + key.replace(/[^a-z0-9]/gi,'');
+    section.innerHTML =
+      '<h3>' + key + '<span class="copy-wrap"><span class="copy-badge" id="badge-' + safeId + '">Copied</span>' +
+      '<button type="button" class="copy-btn" data-key="' + key + '" data-badge="badge-' + safeId + '">Copy</button></span></h3>' +
+      '<div class="content">' + brief[key].replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</div>';
+    container.appendChild(section);
+  });
+  container.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var key = btn.getAttribute('data-key');
+      copyText(currentBrief[key]);
+      flashBadge(btn.getAttribute('data-badge'));
+    });
+  });
+}
+function flashBadge(id){
+  var badge = $(id);
+  if(!badge) return;
+  badge.classList.add('show');
+  setTimeout(function(){ badge.classList.remove('show'); }, 1200);
+}
+function copyText(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).catch(function(){ fallbackCopy(text); });
+  } else { fallbackCopy(text); }
+}
+function fallbackCopy(text){
+  var ta = document.createElement('textarea');
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+}
+$('copy-all').addEventListener('click', function(){
+  if(!currentBrief) return;
+  var order = ["Product Analysis","Video Concept","Hook","Full Script","Scene Breakdown","Shot List","B-roll Ideas","Voiceover","On-screen Text","Editing Suggestions","Music Style","CTA"];
+  var full = order.map(function(k){ return k.toUpperCase() + "\n" + currentBrief[k]; }).join("\n\n---\n\n");
+  copyText(full);
+  var old = $('copy-all').textContent;
+  $('copy-all').textContent = 'Copied ✓';
+  setTimeout(function(){ $('copy-all').textContent = old; }, 1400);
+});
+
+// ---------- generate flow ----------
+function readMeta(){
+  var name = $('product-name').value.trim();
+  return {
+    product: name || 'Your Product',
+    category: $('category').value,
+    platform: $('platform').value,
+    videoType: $('video-type').value,
+    style: $('style').value,
+    duration: $('duration').value,
+    audience: $('audience').value
+  };
+}
+async function runGenerate(meta){
+  $('status-panel').style.display = 'block';
+  $('log').innerHTML = '';
+  bumpProgress(0);
+  $('status-panel').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  var steps = [
+    'Analyzing product image…',
+    'Identifying category & audience signals…',
+    'Drafting hook options…',
+    'Building scene breakdown…',
+    'Writing full script & voiceover…',
+    'Finalizing creative brief…'
+  ];
+  $('go').disabled = true;
+  for(var i=0;i<steps.length;i++){
+    var entry = logLine(steps[i], 'active');
+    await sleep(350 + Math.random()*250);
+    entry.className = 'entry done';
+    entry.querySelector('.mark').textContent = '✔';
+    bumpProgress((i+1)/steps.length);
+  }
+  var brief = buildBrief(meta);
+  renderBrief(meta, brief);
+  saveToHistory(meta, brief);
+  $('go').disabled = false;
+  $('out-panel').scrollIntoView({ behavior:'smooth' });
+}
+$('go').addEventListener('click', function(){
+  runGenerate(readMeta());
+});
+
+// ---------- variants ----------
+function regenerateWithOverride(overrides){
+  if(!currentMeta) return;
+  var meta = Object.assign({}, currentMeta, overrides || {});
+  if(overrides && overrides.style) $('style').value = overrides.style;
+  if(overrides && overrides.duration) $('duration').value = overrides.duration;
+  runGenerate(meta);
+}
+$('v-another').addEventListener('click', function(){ regenerateWithOverride({}); });
+$('v-emotional').addEventListener('click', function(){ regenerateWithOverride({ style:'Emotional' }); });
+$('v-funny').addEventListener('click', function(){ regenerateWithOverride({ style:'Funny' }); });
+$('v-luxury').addEventListener('click', function(){ regenerateWithOverride({ style:'Luxury' }); });
+$('v-viral').addEventListener('click', function(){ regenerateWithOverride({ style:'Viral' }); });
+$('v-shorter').addEventListener('click', function(){
+  if(!currentMeta) return;
+  var idx = DURATIONS.indexOf(currentMeta.duration);
+  var next = DURATIONS[Math.max(0, idx-1)];
+  regenerateWithOverride({ duration: next });
+});
+$('v-longer').addEventListener('click', function(){
+  if(!currentMeta) return;
+  var idx = DURATIONS.indexOf(currentMeta.duration);
+  var next = DURATIONS[Math.min(DURATIONS.length-1, idx+1)];
+  regenerateWithOverride({ duration: next });
+});
+
+// ---------- history ----------
+function saveToHistory(meta, brief){
+  var entry = { id: Date.now() + '-' + Math.floor(Math.random()*1000), ts: Date.now(), meta: meta, brief: brief, favorite: false };
+  history.unshift(entry);
+  if(history.length > 50) history = history.slice(0, 50);
+  persistHistory();
+  renderHistory();
+}
+function persistHistory(){
+  try{ localStorage.setItem('ugc-history', JSON.stringify(history)); }catch(e){}
+}
+function renderHistory(){
+  $('history-panel').style.display = history.length ? 'block' : 'none';
+  var list = $('history-list');
+  list.innerHTML = '';
+  var items = historyFilter === 'fav' ? history.filter(function(h){ return h.favorite; }) : history;
+  if(!items.length){
+    list.innerHTML = '<p class="empty-note">No ' + (historyFilter === 'fav' ? 'favorites' : 'history') + ' yet.</p>';
+    return;
+  }
+  items.forEach(function(h){
+    var row = document.createElement('div');
+    row.className = 'history-item';
+    var d = new Date(h.ts);
+    row.innerHTML =
+      '<button type="button" class="star-btn' + (h.favorite ? ' active' : '') + '" data-id="' + h.id + '">' + (h.favorite ? '★' : '☆') + '</button>' +
+      '<div class="h-meta"><b>' + h.meta.product + '</b>' + h.meta.category + ' · ' + h.meta.platform + ' · ' + h.meta.videoType + ' · ' + h.meta.style + ' · ' + h.meta.duration + 's · ' + d.toLocaleString() + '</div>' +
+      '<button type="button" class="ghost load-btn" data-id="' + h.id + '">Load</button>';
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.star-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-id');
+      var h = history.find(function(x){ return x.id === id; });
+      if(h){ h.favorite = !h.favorite; persistHistory(); renderHistory(); }
+    });
+  });
+  list.querySelectorAll('.load-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var id = btn.getAttribute('data-id');
+      var h = history.find(function(x){ return x.id === id; });
+      if(h){ renderBrief(h.meta, h.brief); $('out-panel').scrollIntoView({ behavior:'smooth' }); }
+    });
+  });
+}
+document.querySelectorAll('.filter-tabs button').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.filter-tabs button').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    historyFilter = btn.getAttribute('data-filter');
+    renderHistory();
+  });
+});
+renderHistory();
+</script>
+</body>
+</html>
