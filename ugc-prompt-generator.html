@@ -247,7 +247,13 @@
 <body>
 <div class="wrap">
 
-  <div style="display:flex;align-items:center;justify-content:flex-end;margin:0 0 14px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 14px">
+    <a href="index.html" class="theme-toggle" style="text-decoration:none;">
+      <span class="theme-toggle-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </span>
+      <span>Back</span>
+    </a>
     <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
       <span class="theme-toggle-icon" aria-hidden="true">
         <svg class="icon-sun" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.6"/><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="4.2" y1="4.2" x2="5.9" y2="5.9"/><line x1="18.1" y1="18.1" x2="19.8" y2="19.8"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.2" y1="19.8" x2="5.9" y2="18.1"/><line x1="18.1" y1="5.9" x2="19.8" y2="4.2"/></svg>
@@ -294,6 +300,11 @@
         <button type="button" class="ghost" id="analyze-link" style="flex-shrink:0; padding:12px 20px; font-size:14px; white-space:nowrap">Analyze Link</button>
       </div>
       <p class="hint" id="link-result"></p>
+      <p class="hint" style="margin-top:6px">Works best with brand and independent store sites (e.g. Shopify stores, Etsy, direct brand websites). Shopee, Lazada, and some other marketplace links often block automatic detection — if that happens, just fill in the product name manually above.</p>
+      <p class="hint" style="margin-top:10px">
+        Shopping on Shopee? <a href="install-shopee-bookmarklet.html" target="_blank" style="color:var(--cyan); font-weight:600; text-decoration:none">Install the Shopee bookmarklet →</a>
+        <span style="color:var(--mute)">— pulls product info straight from the page you're viewing, one click.</span>
+      </p>
     </div>
   </div>
 
@@ -567,6 +578,9 @@ var CATEGORY_KEYWORDS = {
   "Office": ["office","desk","chair","laptop stand","desk organizer","monitor stand"]
 };
 
+// Your live Vercel backend — update this if you redeploy to a different domain
+var META_API = 'https://ugc-prompt-generator-chi.vercel.app/api/fetch-meta';
+
 function detectStore(hostname){
   hostname = (hostname || '').toLowerCase();
   if(hostname.indexOf('shopee') > -1) return 'Shopee';
@@ -601,6 +615,25 @@ function extractProductNameFromUrl(urlObj){
     return name.slice(0, 60);
   }catch(e){ return ''; }
 }
+function cleanTitleForProductName(title, store){
+  if(!title) return '';
+  var name = title;
+  // Strip common store suffixes like " | Shopee Philippines", " - Lazada", etc.
+  name = name.split(/\s*[\|\u2013\u2014-]\s*/)[0];
+  name = name.replace(/\s+/g,' ').trim();
+  return name.slice(0, 60);
+}
+function showLinkPreviewImage(imageUrl){
+  if(!imageUrl) return;
+  uploadedFile = null;
+  var imgEl = $('preview-img'), vidEl = $('preview-video');
+  vidEl.style.display = 'none'; vidEl.removeAttribute('src');
+  imgEl.src = imageUrl; imgEl.style.display = 'block';
+  $('preview-name').textContent = 'From product link';
+  $('preview-size').textContent = '';
+  $('preview-wrap').style.display = 'flex';
+  dropzone.style.display = 'none';
+}
 function analyzeProductLink(raw){
   raw = (raw || '').trim();
   if(!raw) return;
@@ -612,22 +645,54 @@ function analyzeProductLink(raw){
     return;
   }
   var store = detectStore(urlObj.hostname);
-  var name = extractProductNameFromUrl(urlObj);
-  var category = guessCategoryFromText(name + ' ' + raw);
-  if(name) $('product-name').value = name;
-  if(category) $('category').value = category;
-  var msg = 'Detected a ' + store + ' link.';
-  msg += name ? (' Guessed product name: "' + name + '".') : ' Could not guess a product name from this link — enter one manually.';
-  msg += category ? (' Likely category: ' + category + '.') : ' Category isn\'t obvious from the link — please pick one.';
-  msg += ' (Parsed from the link text only, not the live page.)';
-  $('link-result').textContent = msg;
-  resetForNewGeneration();
+  var fallbackName = extractProductNameFromUrl(urlObj);
+
+  $('analyze-link').disabled = true;
+  $('link-result').textContent = 'Fetching product details from the link…';
+
+  fetch(META_API + '?url=' + encodeURIComponent(urlObj.toString()))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var name = cleanTitleForProductName(data && data.title, store) || fallbackName;
+      var textForCategory = (data && (data.title + ' ' + (data.description || ''))) || (fallbackName + ' ' + raw);
+      var category = guessCategoryFromText(textForCategory);
+      var usedLiveData = !!(data && data.title);
+
+      if(name) $('product-name').value = name;
+      if(category) $('category').value = category;
+      if(data && data.image) showLinkPreviewImage(data.image);
+
+      var msg = 'Detected a ' + store + ' link.';
+      if(usedLiveData){
+        msg += name ? (' Pulled product name from the page: "' + name + '".') : ' Fetched the page but couldn\'t find a name — enter one manually.';
+      } else {
+        msg += name ? (' Guessed product name from the link text: "' + name + '".') : ' Could not detect a product name — enter one manually.';
+        msg += ' (' + store + ' often blocks automatic page detection, so this is a best guess.)';
+      }
+      msg += category ? (' Likely category: ' + category + '.') : ' Category isn\'t obvious — please pick one.';
+      $('link-result').textContent = msg;
+      $('analyze-link').disabled = false;
+      resetForNewGeneration();
+    })
+    .catch(function(){
+      // Backend unreachable or errored — fall back to slug-based guessing entirely
+      var category = guessCategoryFromText(fallbackName + ' ' + raw);
+      if(fallbackName) $('product-name').value = fallbackName;
+      if(category) $('category').value = category;
+      var msg = 'Detected a ' + store + ' link.';
+      msg += fallbackName ? (' Guessed product name from the link text: "' + fallbackName + '".') : ' Could not guess a product name — enter one manually.';
+      msg += category ? (' Likely category: ' + category + '.') : ' Category isn\'t obvious — please pick one.';
+      msg += ' (Couldn\'t reach the live page, so this is parsed from the link text only.)';
+      $('link-result').textContent = msg;
+      $('analyze-link').disabled = false;
+      resetForNewGeneration();
+    });
 }
 
 // ---------- state ----------
 var uploadedFile = null;
-var history = [];
-try{ history = JSON.parse(localStorage.getItem('ugc-history') || '[]'); }catch(e){ history = []; }
+var savedBriefs = [];
+try{ savedBriefs = JSON.parse(localStorage.getItem('ugc-history') || '[]'); }catch(e){ savedBriefs = []; }
 var historyFilter = 'all';
 var currentBrief = null;
 var currentMeta = null;
@@ -685,6 +750,7 @@ linkInput.addEventListener('paste', function(e){
 });
 
 $('remove-img').addEventListener('click', function(){
+  // Clears both a manually-uploaded file and an image pulled from a product link
   uploadedFile = null;
   $('preview-wrap').style.display = 'none';
   $('preview-img').style.display = 'none'; $('preview-img').removeAttribute('src');
@@ -922,19 +988,19 @@ $('v-longer').addEventListener('click', function(){
 // ---------- history ----------
 function saveToHistory(meta, brief){
   var entry = { id: Date.now() + '-' + Math.floor(Math.random()*1000), ts: Date.now(), meta: meta, brief: brief, favorite: false };
-  history.unshift(entry);
-  if(history.length > 50) history = history.slice(0, 50);
+  savedBriefs.unshift(entry);
+  if(savedBriefs.length > 50) savedBriefs = savedBriefs.slice(0, 50);
   persistHistory();
   renderHistory();
 }
 function persistHistory(){
-  try{ localStorage.setItem('ugc-history', JSON.stringify(history)); }catch(e){}
+  try{ localStorage.setItem('ugc-history', JSON.stringify(savedBriefs)); }catch(e){}
 }
 function renderHistory(){
-  $('history-panel').style.display = history.length ? 'block' : 'none';
+  $('history-panel').style.display = savedBriefs.length ? 'block' : 'none';
   var list = $('history-list');
   list.innerHTML = '';
-  var items = historyFilter === 'fav' ? history.filter(function(h){ return h.favorite; }) : history;
+  var items = historyFilter === 'fav' ? savedBriefs.filter(function(h){ return h.favorite; }) : savedBriefs;
   if(!items.length){
     list.innerHTML = '<p class="empty-note">No ' + (historyFilter === 'fav' ? 'favorites' : 'history') + ' yet.</p>';
     return;
@@ -952,14 +1018,14 @@ function renderHistory(){
   list.querySelectorAll('.star-btn').forEach(function(btn){
     btn.addEventListener('click', function(){
       var id = btn.getAttribute('data-id');
-      var h = history.find(function(x){ return x.id === id; });
+      var h = savedBriefs.find(function(x){ return x.id === id; });
       if(h){ h.favorite = !h.favorite; persistHistory(); renderHistory(); }
     });
   });
   list.querySelectorAll('.load-btn').forEach(function(btn){
     btn.addEventListener('click', function(){
       var id = btn.getAttribute('data-id');
-      var h = history.find(function(x){ return x.id === id; });
+      var h = savedBriefs.find(function(x){ return x.id === id; });
       if(h){ renderBrief(h.meta, h.brief); $('out-panel').scrollIntoView({ behavior:'smooth' }); }
     });
   });
@@ -973,6 +1039,35 @@ document.querySelectorAll('.filter-tabs button').forEach(function(btn){
   });
 });
 renderHistory();
+
+// ---------- receive data pushed in from the Shopee bookmarklet ----------
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  if(!params.has('bm_title') && !params.has('bm_image')) return;
+
+  var title = params.get('bm_title') || '';
+  var image = params.get('bm_image') || '';
+  var description = params.get('bm_desc') || '';
+  var price = params.get('bm_price') || '';
+  var sourceUrl = params.get('bm_url') || '';
+
+  var name = cleanTitleForProductName(title, 'Shopee') || title;
+  if(name) $('product-name').value = name;
+  if(sourceUrl) $('product-link').value = sourceUrl;
+  if(image) showLinkPreviewImage(image);
+
+  var category = guessCategoryFromText(title + ' ' + description);
+  if(category) $('category').value = category;
+
+  var msg = 'Pulled from the Shopee page you had open.';
+  msg += name ? (' Product name: "' + name + '".') : '';
+  msg += price ? (' Listed price: ' + price + '.') : '';
+  msg += category ? (' Likely category: ' + category + '.') : ' Category isn\'t obvious — please pick one.';
+  $('link-result').textContent = msg;
+
+  // Clean the URL so refreshing the page doesn't re-trigger this
+  window.history.replaceState({}, document.title, window.location.pathname);
+})();
 </script>
 </body>
 </html>
