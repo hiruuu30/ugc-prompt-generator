@@ -228,6 +228,9 @@
   .filter-tabs{display:flex; gap:8px; margin-bottom:16px;}
   .filter-tabs button{font-size:13px; padding:7px 16px; background:var(--surface-2); border:1px solid var(--border); color:var(--text);}
   .filter-tabs button.active{background:var(--pink); border-color:var(--pink); color:#fff;}
+  .char-mode-tabs{display:flex; gap:8px; margin-bottom:4px; flex-wrap:wrap;}
+  .char-mode-tabs button{font-size:13px; padding:7px 16px; background:var(--surface-2); border:1px solid var(--border); color:var(--text);}
+  .char-mode-tabs button.active{background:var(--pink); border-color:var(--pink); color:#fff;}
   .history-item{display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:10px; background:var(--surface);}
   .history-item .h-meta{flex:1; font-size:12.5px; color:var(--mute); min-width:0;}
   .history-item .h-meta b{color:var(--text); font-size:14px; display:block; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -270,7 +273,8 @@
     <div class="steps3">
       <div class="step3"><div class="n">Step 1</div><div class="t">Upload Product</div></div>
       <div class="step3"><div class="n">Step 2</div><div class="t">Choose Options</div></div>
-      <div class="step3"><div class="n">Step 3</div><div class="t">Generate Prompt</div></div>
+      <div class="step3"><div class="n">Step 3</div><div class="t">Add Character</div></div>
+      <div class="step3"><div class="n">Step 4</div><div class="t">Generate Prompt</div></div>
     </div>
   </div>
 
@@ -373,6 +377,15 @@
     </div>
     <div class="row2">
       <div class="field">
+        <label for="language">Language / Tone</label>
+        <select id="language">
+          <option value="English">English</option>
+          <option value="Casual Tagalog">Casual Tagalog (Taglish)</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
         <label for="duration">Duration</label>
         <select id="duration">
           <option value="15">15 sec</option>
@@ -400,20 +413,86 @@
   </div>
 
   <div class="panel">
-    <h2><span class="num">3</span> Generate</h2>
+    <h2><span class="num">3</span> Character <span style="color:var(--mute);font-weight:400;font-size:14px">(optional — keeps the same creator across every scene)</span></h2>
+    <div class="char-mode-tabs" id="char-mode-tabs">
+      <button type="button" class="active" data-mode="none">No specific character</button>
+      <button type="button" data-mode="text">Describe in text</button>
+      <button type="button" data-mode="preset">Choose a preset</button>
+      <button type="button" data-mode="upload">Upload Character Board</button>
+    </div>
+
+    <div id="char-text-field" class="field" style="display:none; margin-top:16px; margin-bottom:0">
+      <label for="char-description">Character description</label>
+      <textarea id="char-description" rows="3" placeholder="e.g. Filipina woman in her mid-20s, casual homewear, warm and friendly energy, shoulder-length wavy hair"></textarea>
+    </div>
+
+    <div id="char-preset-field" class="field" style="display:none; margin-top:16px; margin-bottom:0">
+      <label for="char-preset">Character preset</label>
+      <select id="char-preset">
+        <option value="">Choose a preset…</option>
+        <option value="Young mom in her early 30s, casual homewear, warm and relatable energy">Young Mom — Casual Homewear</option>
+        <option value="Gen Z creator in their early 20s, trendy streetwear, high-energy and expressive">Gen Z Creator — Trendy Streetwear</option>
+        <option value="Corporate professional in their late 20s, smart-casual office wear, calm and credible energy">Corporate Professional — Smart-Casual</option>
+        <option value="Fitness enthusiast in their mid-20s, activewear, energetic and motivating">Fitness Enthusiast — Activewear</option>
+        <option value="Cozy homebody in their 20s, oversized loungewear, soft-spoken and relaxed energy">Cozy Homebody — Loungewear</option>
+        <option value="Glam beauty creator in their 20s, polished makeup and styled hair, confident on-camera energy">Glam Beauty Creator — Polished Look</option>
+      </select>
+    </div>
+
+    <div id="char-upload-field" style="display:none; margin-top:16px">
+      <div class="dropzone" id="char-dropzone">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p class="dz-title">Drag &amp; drop a reference photo</p>
+        <p>or click to browse</p>
+        <p>JPG, PNG, or WEBP</p>
+      </div>
+      <input type="file" id="char-file-input" accept="image/jpeg,image/png,image/webp" style="display:none">
+      <div id="char-preview-wrap" class="preview-wrap" style="display:none">
+        <img id="char-preview-img" alt="Character reference preview">
+        <div class="preview-meta"><b id="char-preview-name"></b><span id="char-preview-size"></span></div>
+        <button type="button" class="remove-img" id="char-remove-img">Remove</button>
+      </div>
+      <p class="hint" style="margin-top:10px">Stays local to your browser except when analyzed below — the brief will reference it as a visual guide for whatever AI video tool you paste the prompt into.</p>
+
+      <div style="margin-top:18px; border-top:1px solid var(--border); padding-top:18px">
+        <div id="char-board-photo-flow" style="display:none">
+          <button type="button" class="ghost" id="gen-character-board-photo">✦ Analyze Photo &amp; Generate Character Board Prompt</button>
+          <p class="hint" id="char-board-photo-hint">Sends your photo to Claude to write an AI image-generation prompt for a consistent multi-angle character board, based on what's actually in the photo.</p>
+        </div>
+        <div id="char-board-text-flow">
+          <label for="char-board-text-desc">No reference photo? Describe your character instead</label>
+          <textarea id="char-board-text-desc" rows="3" placeholder="e.g. Filipina woman in her mid-20s, casual homewear, warm and friendly energy, shoulder-length wavy hair" style="margin-bottom:10px"></textarea>
+          <button type="button" class="ghost" id="gen-character-board-text">✦ Generate Character Board Prompt</button>
+        </div>
+        <div class="brief-section" id="char-board-wrap" style="display:none; margin-top:14px">
+          <h3>Character Board Prompt<span class="copy-wrap"><span class="copy-badge" id="badge-char-board">Copied</span>
+          <button type="button" class="copy-btn" id="copy-char-board">Copy</button></span></h3>
+          <div class="content" id="char-board-output"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:18px; margin-bottom:0">
+      <label for="setting">Setting / Background <span style="color:var(--mute);font-weight:400">(auto-suggested from category — edit anytime)</span></label>
+      <input type="text" id="setting" placeholder="e.g. home kitchen, morning light">
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="num">4</span> Generate</h2>
     <button id="go">Generate Prompt</button>
     <p class="hint">Builds a full creative brief by dynamically combining your product, category, platform, video type, style, duration, and audience — nothing here is a single hardcoded template.</p>
   </div>
 
   <div class="panel" id="status-panel" style="display:none">
-    <h2><span class="num">4</span> Status</h2>
+    <h2><span class="num">5</span> Status</h2>
     <div class="log" id="log"></div>
     <div class="progress-outer"><div class="progress-inner" id="progress-inner"></div></div>
     <p class="progress-label" id="progress-label"></p>
   </div>
 
   <div class="panel" id="out-panel" style="display:none">
-    <h2><span class="num">5</span> Creative Brief</h2>
+    <h2><span class="num">6</span> Creative Brief</h2>
     <div class="brief-head">
       <div class="tags" id="brief-tags"></div>
       <button type="button" class="ghost" id="copy-all">Copy Entire Prompt</button>
@@ -431,7 +510,7 @@
   </div>
 
   <div class="panel" id="history-panel" style="display:none">
-    <h2><span class="num">6</span> History</h2>
+    <h2><span class="num">7</span> History</h2>
     <div class="filter-tabs">
       <button type="button" class="active" data-filter="all">All</button>
       <button type="button" data-filter="fav">Favorites</button>
@@ -555,14 +634,67 @@ var CAPTION_BY_PURPOSE = {
   talking: ["real talk for a sec","hear me out","let me explain"],
   cta: ["link in bio ⬇️","go grab yours","you're welcome"]
 };
+var CAPTION_BY_PURPOSE_CTA_TIKTOK = ["yellow basket ⬇️","check the yellow basket","tap the basket, thank me later"];
+var CAPTION_BY_PURPOSE_TAGALOG = {
+  hook: ["sandali lang 👀","ay iba pala 'to","hindi ko rin inexpect 'to","tama pala ang FYP"],
+  introduce: ["ito si {product} pala","{product} 'to btw","na-discover: {product}"],
+  problem: ["totoo talaga 'tong struggle","baka ako lang ba","before: gulo"],
+  solution: ["tapos ganito nangyari","game changer, walang kaso","'to na 'yung nag-fix"],
+  demo: ["ganito gamitin","'yung demo na kailangan mo","panoorin mo 'to"],
+  reveal: ["tara tingnan natin laman","unboxing time","first look"],
+  reaction: ["di ko rin inexpect 'yon","hindi ko akalain","mukha ko rn"],
+  closeup: ["'yung detail 🔍","tignan mo 'yung texture","zoom in, makikita mo"],
+  comparison: ["before vs. ngayon","walang comparison","dating paraan vs. {product}"],
+  routine: ["normal day lang naman","part na ng routine ko","hindi sponsored, obsessed lang"],
+  before: ["before:","'yung before shot"],
+  after: ["after:","'yung after shot 😮"],
+  talking: ["seryoso, sandali lang","makinig ka muna","let me explain 'to"],
+  cta: ["link nasa bio ⬇️","kunin mo na","walang anuman"]
+};
+var CAPTION_BY_PURPOSE_CTA_TIKTOK_TAGALOG = ["yellow basket ⬇️","i-check yung yellow basket","i-basket mo na, thank me later sa'kin"];
+function getCaptionPool(meta){
+  var isTikTok = meta.platform === 'TikTok';
+  var isTagalog = meta.language === 'Casual Tagalog';
+  var base = isTagalog ? CAPTION_BY_PURPOSE_TAGALOG : CAPTION_BY_PURPOSE;
+  var pool = {};
+  Object.keys(base).forEach(function(k){ pool[k] = base[k]; });
+  if(isTikTok) pool.cta = isTagalog ? CAPTION_BY_PURPOSE_CTA_TIKTOK_TAGALOG : CAPTION_BY_PURPOSE_CTA_TIKTOK;
+  return pool;
+}
 
 var HOOK_LINES = ["POV: you just found out {product} fixes {painPoint} for good.","Nobody asked me but I need to talk about {product}.","{painPoint}? Not anymore, not since {product}.","I was today years old when I found {product}.","This is your sign to finally try {product}.","Okay wait, {product} actually works and I have receipts.","Tell me why {product} was hiding from me this whole time.","The way {product} just solved {painPoint} in one try—"];
-var CTA_LINES = ["Link in bio before this sells out","Tap the link, thank me later","Go grab yours before I do","Comment 'LINK' and I'll send it your way","Add it to cart, you deserve this","Shop now — trust me on this one","Don't sleep on this one, link's up top"];
+var HOOK_LINES_TAGALOG = ["POV: na-solve na pala ni {product} 'yung usual mong problema — {painPoint}.","Wala pang nagtanong pero kailangan ko talagang pag-usapan si {product}.","'Yung {painPoint}? Hindi na, dahil kay {product} na.","Ngayon ko lang nalaman may {product} pala.","Sign mo na 'to para subukan na si {product}.","Sandali lang — gumagana talaga si {product}, may patunay pa ako.","Bakit ngayon ko lang nadiskubre si {product}?","'Yung sobrang bilis na pag-aayos ni {product} sa — {painPoint} — hala."];
+var CTA_LINES_TIKTOK = ["Check the yellow basket for this one","Tap the yellow basket to grab yours","It's all in the yellow basket — go take a look","Yellow basket has you covered, go add to cart","Grab yours from the yellow basket below","Yellow basket, that's where you'll find it","Tap that yellow basket before it's gone"];
+var CTA_LINES_GENERAL = ["Link in bio before this sells out","Tap the link, thank me later","Go grab yours before I do","Comment 'LINK' and I'll send it your way","Add it to cart, you deserve this","Shop now — trust me on this one","Don't sleep on this one, link's up top"];
+var CTA_LINES_TIKTOK_TAGALOG = ["I-check yung yellow basket para dito","I-tap yung yellow basket para makuha mo 'to","Nandyan lahat sa yellow basket, i-tap mo lang","May sagot yung yellow basket, i-add to cart na","Kunin mo na sa yellow basket sa baba","Yellow basket, dun mo makikita","I-tap na yung yellow basket bago maubos"];
+var CTA_LINES_GENERAL_TAGALOG = ["Link nasa bio, bilisan mo bago maubos","I-tap yung link, thank you na lang sa 'kin mamaya","Bilhin mo na bago ako pa mauna","I-comment 'LINK' at ipapadala ko sa'yo","I-add to cart na, deserve mo naman","Bilhin mo na — sabi ko na sa'yo","Wag mo tantanan 'to, nasa taas yung link"];
+function getCtaPool(meta){
+  var isTikTok = meta.platform === 'TikTok';
+  var isTagalog = meta.language === 'Casual Tagalog';
+  if(isTikTok && isTagalog) return CTA_LINES_TIKTOK_TAGALOG;
+  if(isTikTok) return CTA_LINES_TIKTOK;
+  if(isTagalog) return CTA_LINES_GENERAL_TAGALOG;
+  return CTA_LINES_GENERAL;
+}
 var SHOT_POOL = ["Close-up","POV","Selfie","Overhead","Walking Shot","Handheld","Macro","Product Spin"];
 var BROLL_POOL = ["Texture close-up of {product} from a different angle","Hands interacting with {product} in natural light","A quick lifestyle cutaway showing {category} in everyday use","Detail shot of packaging or branding on {product}","Slow-motion insert of {product} being picked up or set down","Ambient shot of the space or setting the video takes place in"];
 
 var DURATIONS = ["15","20","30","45","60"];
 
+var CATEGORY_SETTINGS = {
+  "Beauty": "bathroom vanity or bedroom mirror setup",
+  "Skincare": "bathroom vanity, soft natural light",
+  "Fashion": "bedroom closet or full-length mirror",
+  "Electronics": "desk setup or living room",
+  "Kitchen": "home kitchen countertop",
+  "Home": "living room",
+  "Pet": "living room or backyard",
+  "Fitness": "home gym or open living room floor space",
+  "Food": "kitchen or dining table",
+  "Baby": "nursery or living room",
+  "Automotive": "garage or driveway",
+  "Office": "home office desk setup"
+};
 var CATEGORY_KEYWORDS = {
   "Beauty": ["makeup","lipstick","lip tint","liptint","foundation","mascara","blush","palette","cosmetic","lip gloss","eyeliner","concealer"],
   "Skincare": ["serum","moisturizer","cleanser","sunscreen","toner","skincare","essence","acne","retinol","niacinamide","spf"],
@@ -580,6 +712,7 @@ var CATEGORY_KEYWORDS = {
 
 // Your live Vercel backend — update this if you redeploy to a different domain
 var META_API = 'https://ugc-prompt-generator-chi.vercel.app/api/fetch-meta';
+var ANALYZE_PHOTO_API = 'https://ugc-prompt-generator-chi.vercel.app/api/analyze-photo';
 
 function detectStore(hostname){
   hostname = (hostname || '').toLowerCase();
@@ -759,6 +892,152 @@ $('remove-img').addEventListener('click', function(){
   fileInput.value = '';
   resetForNewGeneration();
 });
+
+// ---------- character mode ----------
+var charMode = 'none';
+document.querySelectorAll('#char-mode-tabs button').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('#char-mode-tabs button').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    charMode = btn.getAttribute('data-mode');
+    $('char-text-field').style.display = charMode === 'text' ? 'block' : 'none';
+    $('char-preset-field').style.display = charMode === 'preset' ? 'block' : 'none';
+    $('char-upload-field').style.display = charMode === 'upload' ? 'block' : 'none';
+  });
+});
+
+// ---------- character reference upload ----------
+var charUploadedFile = null;
+var charDropzone = $('char-dropzone'), charFileInput = $('char-file-input');
+charDropzone.addEventListener('click', function(){ charFileInput.click(); });
+charDropzone.addEventListener('dragover', function(e){ e.preventDefault(); charDropzone.classList.add('drag'); });
+charDropzone.addEventListener('dragleave', function(){ charDropzone.classList.remove('drag'); });
+charDropzone.addEventListener('drop', function(e){
+  e.preventDefault(); charDropzone.classList.remove('drag');
+  if(e.dataTransfer.files && e.dataTransfer.files[0]) handleCharFile(e.dataTransfer.files[0]);
+});
+charFileInput.addEventListener('change', function(){ if(charFileInput.files[0]) handleCharFile(charFileInput.files[0]); });
+function handleCharFile(file){
+  charUploadedFile = file;
+  var url = URL.createObjectURL(file);
+  var imgEl = $('char-preview-img');
+  imgEl.src = url; imgEl.style.display = 'block';
+  $('char-preview-name').textContent = file.name || 'reference-photo.png';
+  $('char-preview-size').textContent = file.size ? (Math.round(file.size/1024) + ' KB') : '';
+  $('char-preview-wrap').style.display = 'flex';
+  charDropzone.style.display = 'none';
+  updateCharBoardFlowVisibility();
+}
+$('char-remove-img').addEventListener('click', function(){
+  charUploadedFile = null;
+  $('char-preview-wrap').style.display = 'none';
+  $('char-preview-img').style.display = 'none'; $('char-preview-img').removeAttribute('src');
+  charDropzone.style.display = 'block';
+  charFileInput.value = '';
+  updateCharBoardFlowVisibility();
+});
+function updateCharBoardFlowVisibility(){
+  var hasPhoto = !!charUploadedFile;
+  $('char-board-photo-flow').style.display = hasPhoto ? 'block' : 'none';
+  $('char-board-text-flow').style.display = hasPhoto ? 'none' : 'block';
+}
+updateCharBoardFlowVisibility();
+
+// ---------- setting auto-suggest from category ----------
+var settingInput = $('setting');
+var settingAutoValue = '';
+function applyAutoSetting(){
+  var suggested = CATEGORY_SETTINGS[$('category').value] || '';
+  if(!settingInput.value || settingInput.value === settingAutoValue){
+    settingInput.value = suggested;
+  }
+  settingAutoValue = suggested;
+}
+$('category').addEventListener('change', applyAutoSetting);
+applyAutoSetting();
+
+function readCharacterDescription(){
+  if(charMode === 'text') return $('char-description').value.trim();
+  if(charMode === 'preset') return $('char-preset').value;
+  if(charMode === 'upload' && charUploadedFile){
+    return "Match the attached reference photo (\"" + charUploadedFile.name + "\") for the on-camera creator's face, styling, and vibe in every scene.";
+  }
+  return '';
+}
+
+// ---------- character board prompt ----------
+function buildCharacterBoardPrompt(desc){
+  return "Character reference sheet / turnaround for a single consistent character, described as: \"" + desc + "\".\n\n" +
+    "Show the same person across multiple views on one sheet:\n" +
+    "• Front-facing view, neutral relaxed expression\n" +
+    "• 3/4 angle view\n" +
+    "• Side profile view\n" +
+    "• Close-up headshot, natural warm smile\n" +
+    "• Full-body view in the described outfit\n\n" +
+    "Keep facial features, hairstyle, skin tone, body type, and outfit identical across every view — this is one single character, not different people. Plain neutral studio background (light gray or white), soft even lighting, photorealistic, no text or watermarks, no props.\n\n" +
+    "Purpose: use this sheet as a visual reference to keep the character consistent across separately generated video scenes.";
+}
+function fileToBase64(file){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(){ resolve(reader.result.split(',')[1]); };
+    reader.onerror = function(){ reject(new Error('Could not read file')); };
+    reader.readAsDataURL(file);
+  });
+}
+async function analyzeCharacterPhoto(file){
+  var base64 = await fileToBase64(file);
+  var mediaType = file.type || 'image/jpeg';
+  var instruction = "You are analyzing a reference photo of a person who will appear as the on-camera creator in a UGC-style product video. Write a single AI image-generation prompt (for tools like Midjourney, DALL\u00b7E, or Ideogram) that will produce a character reference/turnaround sheet showing this same person from multiple angles, for maintaining visual consistency across separately generated video scenes.\n\nBase the description on what you actually see in the photo \u2014 apparent age range, hair, skin tone, build, and notable styling/clothing.\n\nThe prompt must ask for a single reference sheet including: a front-facing view (neutral expression), a 3/4 angle view, a side profile view, a close-up headshot (natural warm smile), and a full-body view in the same outfit. Specify that facial features, hairstyle, skin tone, body type, and outfit stay identical across every view \u2014 this is one person, not different people. Specify a plain neutral studio background (light gray or white), soft even lighting, photorealistic style, no text or watermarks, no props.\n\nOutput ONLY the finished prompt text, ready to paste into an image generator. No preamble, no explanation, no markdown, no surrounding quotation marks.";
+  var response = await fetch(ANALYZE_PHOTO_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      image: base64,
+      mediaType: mediaType,
+      instruction: instruction
+    })
+  });
+  var data = await response.json();
+  if(!response.ok) throw new Error(data.error || 'API request failed');
+  return (data.text || '').trim();
+}
+$('gen-character-board-photo').addEventListener('click', async function(){
+  if(!charUploadedFile) return;
+  var btn = $('gen-character-board-photo');
+  var oldText = btn.textContent;
+  var hint = $('char-board-photo-hint');
+  btn.textContent = 'Analyzing photo…';
+  btn.disabled = true;
+  hint.style.color = '';
+  hint.textContent = "Sends your photo to Claude to write an AI image-generation prompt for a consistent multi-angle character board, based on what's actually in the photo.";
+  try{
+    var promptText = await analyzeCharacterPhoto(charUploadedFile);
+    if(!promptText) throw new Error('Empty response');
+    $('char-board-output').textContent = promptText;
+    $('char-board-wrap').style.display = 'block';
+    $('char-board-wrap').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }catch(err){
+    hint.style.color = 'var(--red)';
+    hint.textContent = "Couldn't analyze the photo right now — try again, or describe your character in text instead.";
+  }
+  btn.textContent = oldText;
+  btn.disabled = false;
+});
+$('gen-character-board-text').addEventListener('click', function(){
+  var desc = $('char-board-text-desc').value.trim();
+  if(!desc){
+    $('char-board-text-desc').focus();
+    return;
+  }
+  $('char-board-output').textContent = buildCharacterBoardPrompt(desc);
+  $('char-board-wrap').style.display = 'block';
+  $('char-board-wrap').scrollIntoView({ behavior:'smooth', block:'nearest' });
+});
+$('copy-char-board').addEventListener('click', function(){
+  copyText($('char-board-output').textContent);
+  flashBadge('badge-char-board');
+});
 function resetForNewGeneration(){
   currentBrief = null;
   currentMeta = null;
@@ -795,15 +1074,30 @@ function buildBrief(meta){
   var styleInfo = STYLE_INFO[meta.style];
   var tone = pick(styleInfo.tones);
   var tone2 = pick(styleInfo.tones.filter(function(t){ return t !== tone; }));
-  var hookLine = fill(pick(HOOK_LINES), { product: meta.product, painPoint: painPoint });
-  var ctaLine = pick(CTA_LINES);
+  var isTagalog = meta.language === 'Casual Tagalog';
+  var hookPool = isTagalog ? HOOK_LINES_TAGALOG : HOOK_LINES;
+  var ctaPool = getCtaPool(meta);
+  var captionPool = getCaptionPool(meta);
+  var hookLine = fill(pick(hookPool), { product: meta.product, painPoint: painPoint });
+  var ctaLine = pick(ctaPool);
 
   var tokens = { product: meta.product, category: meta.category, feature: feature, painPoint: painPoint, benefit: benefit, audience: meta.audience || 'a broad, general audience', tone: tone, tone2: tone2, hookLine: hookLine, ctaLine: ctaLine, duration: meta.duration, platform: meta.platform };
 
+  var hasCharacter = !!(meta.character && meta.character.trim());
+  var hasSetting = !!(meta.setting && meta.setting.trim());
+  var consistencyNote = (hasCharacter || hasSetting) ?
+    ("[Consistent throughout: " + [hasCharacter ? meta.character : null, hasSetting ? ("Setting — " + meta.setting) : null].filter(Boolean).join(" · ") + "]\n") : '';
+
+  var characterAndSetting = hasCharacter || hasSetting ?
+    (hasCharacter ? "Character: " + meta.character + "\n" : "") +
+    (hasSetting ? "Setting: " + meta.setting + "\n" : "") +
+    "Keep this consistent across every scene below — repeat it in each shot's prompt if you're feeding this into an AI video generator, so the same creator and location carry through the whole video."
+    : "No specific character or setting locked in — cast and location are flexible for whoever shoots this.";
+
   var structure = SCENE_STRUCTURE[meta.videoType];
   var scenes = structure.map(function(purpose, i){
-    var content = fill(pick(PURPOSE_TEMPLATES[purpose]), tokens);
-    var caption = fill(pick(CAPTION_BY_PURPOSE[purpose]), tokens);
+    var content = consistencyNote + fill(pick(PURPOSE_TEMPLATES[purpose]), tokens);
+    var caption = fill(pick(captionPool[purpose]), tokens);
     return { n: i+1, title: PURPOSE_TITLES[purpose], content: content, caption: caption };
   });
 
@@ -815,11 +1109,16 @@ function buildBrief(meta){
     "Possible pain points:\n" + cat.painPoints.map(function(p){ return "  • " + p; }).join("\n") + "\n" +
     "Benefits:\n" + cat.benefits.map(function(b){ return "  • " + b; }).join("\n");
 
-  var videoConcept = "A " + meta.duration + "-second " + tone + ", " + tone2 + " " + meta.videoType.toLowerCase() + " built for " + meta.platform + ", aimed at " + (meta.audience || "a broad, general audience") + ". " + meta.product + " is the natural hero of a moment viewers already recognize: dealing with " + painPoint + ", then finding the fix. The whole thing should feel " + tone + " rather than like a traditional ad.";
+  var videoConcept = "A " + meta.duration + "-second " + tone + ", " + tone2 + " " + meta.videoType.toLowerCase() + " built for " + meta.platform + ", aimed at " + (meta.audience || "a broad, general audience") + ". " + meta.product + " is the natural hero of a moment viewers already recognize: dealing with " + painPoint + ", then finding the fix. The whole thing should feel " + tone + " rather than like a traditional ad." + (isTagalog ? " Script and captions are in casual Tagalog/Taglish, the way Filipino creators naturally code-switch." : "") + (meta.platform === 'TikTok' ? " CTA follows TikTok Shop guidelines — no external 'link in bio' claims, points to the in-app yellow basket instead." : "");
 
   var hook = "\"" + hookLine + "\"";
 
-  var fullScript =
+  var fullScript = isTagalog ?
+    "[HOOK]\n\"" + hookLine + "\"\n\n" +
+    "[VO] Dati, sobrang bagsak sa akin 'yung — " + painPoint + ". Tapos sinubukan ko si " + meta.product + ".\n\n" +
+    "[VO] Lumabas na si " + feature + " talaga ang kailangan ko — " + benefit + ", promise.\n\n" +
+    "[CTA]\n\"" + ctaLine + "\""
+    :
     "[HOOK]\n\"" + hookLine + "\"\n\n" +
     "[VO] " + painPoint.charAt(0).toUpperCase() + painPoint.slice(1) + " used to be a whole thing for me. Then I tried " + meta.product + ".\n\n" +
     "[VO] Turns out " + feature + " was exactly what I needed — " + benefit + ", honestly.\n\n" +
@@ -832,7 +1131,10 @@ function buildBrief(meta){
 
   var broll = pickMany(BROLL_POOL, 4).map(function(b){ return "• " + fill(b, tokens); }).join("\n");
 
-  var voiceover =
+  var voiceover = isTagalog ?
+    "\"" + hookLine + "\" Dati, sobrang bagsak sa akin — " + painPoint + " — hanggang natuklasan ko si " + meta.product + ". " +
+    "Lumabas na si " + feature + " talaga ang kailangan ko. Ngayon, " + benefit + " na lang, promise. " + ctaLine + "."
+    :
     "\"" + hookLine + "\" " + painPoint.charAt(0).toUpperCase() + painPoint.slice(1) + " used to be my whole personality — then I found " + meta.product + ". " +
     "Turns out " + feature + " was exactly what I needed. Now it's just " + benefit + ", no cap. " + ctaLine + ".";
 
@@ -842,10 +1144,11 @@ function buildBrief(meta){
 
   var musicStyle = styleInfo.music;
 
-  var ctaFinal = "\"" + ctaLine + "\"";
+  var ctaFinal = "\"" + ctaLine + "\"" + (meta.platform === 'TikTok' ? " (TikTok Shop–compliant — directs to the in-app yellow basket, not an external link)" : "");
 
   return {
     "Product Analysis": productAnalysis,
+    "Character & Setting": characterAndSetting,
     "Video Concept": videoConcept,
     "Hook": hook,
     "Full Script": fullScript,
@@ -864,11 +1167,11 @@ function buildBrief(meta){
 function renderBrief(meta, brief){
   currentMeta = meta; currentBrief = brief;
   $('out-panel').style.display = 'block';
-  var tagsHtml = ['Category: ' + meta.category, 'Platform: ' + meta.platform, meta.videoType, meta.style, meta.duration + 's'].map(function(t){ return '<span class="tag">' + t + '</span>'; }).join('');
+  var tagsHtml = ['Category: ' + meta.category, 'Platform: ' + meta.platform, meta.videoType, meta.style, meta.duration + 's', meta.language].map(function(t){ return '<span class="tag">' + t + '</span>'; }).join('');
   $('brief-tags').innerHTML = tagsHtml;
   var container = $('brief-sections');
   container.innerHTML = '';
-  var order = ["Product Analysis","Video Concept","Hook","Full Script","Scene Breakdown","Shot List","B-roll Ideas","Voiceover","On-screen Text","Editing Suggestions","Music Style","CTA"];
+  var order = ["Product Analysis","Character & Setting","Video Concept","Hook","Full Script","Scene Breakdown","Shot List","B-roll Ideas","Voiceover","On-screen Text","Editing Suggestions","Music Style","CTA"];
   order.forEach(function(key, idx){
     var section = document.createElement('div');
     section.className = 'brief-section';
@@ -907,7 +1210,7 @@ function fallbackCopy(text){
 }
 $('copy-all').addEventListener('click', function(){
   if(!currentBrief) return;
-  var order = ["Product Analysis","Video Concept","Hook","Full Script","Scene Breakdown","Shot List","B-roll Ideas","Voiceover","On-screen Text","Editing Suggestions","Music Style","CTA"];
+  var order = ["Product Analysis","Character & Setting","Video Concept","Hook","Full Script","Scene Breakdown","Shot List","B-roll Ideas","Voiceover","On-screen Text","Editing Suggestions","Music Style","CTA"];
   var full = order.map(function(k){ return k.toUpperCase() + "\n" + currentBrief[k]; }).join("\n\n---\n\n");
   copyText(full);
   var old = $('copy-all').textContent;
@@ -925,7 +1228,10 @@ function readMeta(){
     videoType: $('video-type').value,
     style: $('style').value,
     duration: $('duration').value,
-    audience: $('audience').value
+    audience: $('audience').value,
+    language: $('language').value,
+    character: readCharacterDescription(),
+    setting: $('setting').value.trim()
   };
 }
 async function runGenerate(meta){
