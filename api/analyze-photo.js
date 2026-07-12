@@ -4,6 +4,11 @@
 // The Gemini API key lives ONLY in the Vercel environment variable
 // GEMINI_API_KEY — it is never sent to or visible from the browser.
 
+// "gemini-flash-latest" auto-tracks Google's current GA flash model, so this
+// doesn't need to be hand-updated every time a model version is deprecated
+// (gemini-2.0-flash was deprecated and its free-tier quota dropped to 0).
+const MODEL = 'gemini-flash-latest';
+
 module.exports = async function handler(req, res) {
   // CORS (safe to leave open since no secret is ever exposed here;
   // tighten to your own domain if you want to be stricter)
@@ -34,7 +39,7 @@ module.exports = async function handler(req, res) {
     }
 
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
