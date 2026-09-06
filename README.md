@@ -1,1 +1,0 @@
-# ugc-prompt-generator
