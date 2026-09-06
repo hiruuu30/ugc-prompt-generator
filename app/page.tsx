@@ -125,9 +125,6 @@ export default function Page() {
             </span>
             <span className="text-muted-foreground"><BrickBondLockup compact /></span>
           </div>
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            Powered by MediaPipe
-          </span>
         </div>
       </footer>
     </main>
