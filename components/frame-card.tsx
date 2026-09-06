@@ -1,6 +1,12 @@
 import Image from 'next/image'
 import type { Frame } from '@/lib/frames-catalog'
 
+const phpPrice = new Intl.NumberFormat('en-PH', {
+  style: 'currency',
+  currency: 'PHP',
+  maximumFractionDigits: 0,
+})
+
 export function FrameCard({
   frame,
   highlight = false,
@@ -31,7 +37,9 @@ export function FrameCard({
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-baseline justify-between gap-2">
           <h3 className="text-base font-medium leading-none">{frame.name}</h3>
-          <span className="font-mono text-sm text-primary">${frame.price}</span>
+          <span className="font-mono text-sm text-primary">
+            {phpPrice.format(frame.price)}
+          </span>
         </div>
         <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
           {frame.style} · {frame.material}
