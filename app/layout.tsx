@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'OPTYX — Face Shape Frame Finder',
+  title: 'OPTYX by Brick & Bond — Face Shape Frame Finder',
   description:
-    'Live, on-device face shape analysis with real ML face landmarks. Get eyeglass frames matched to your face shape.',
+    'A Brick & Bond concept: live, on-device face shape analysis with real ML face landmarks and eyeglass frame recommendations.',
   generator: 'v0.app',
   icons: {
     icon: [
